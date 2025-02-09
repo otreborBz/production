@@ -10,7 +10,6 @@ import { useModelos } from '../../contexts/ModelosContext';
 import { pdfGenerator } from '../../services/pdfGenerator';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { storage } from '../../services/storage';
-import { PermissionsAndroid } from 'react-native';
 
 // Adicionar interface para o tipo de parada
 interface Parada {
@@ -280,13 +279,8 @@ export function Dashboard() {
         selectedTurno,
         formatDate(selectedDate)
       );
-      Alert.alert('Sucesso', 'PDF gerado com sucesso!');
     } catch (error) {
-      console.error('Erro ao gerar PDF:', error);
-      Alert.alert(
-        'Erro',
-        'Não foi possível gerar o PDF. Verifique as permissões do aplicativo.'
-      );
+      Alert.alert('Erro', 'Não foi possível gerar o PDF');
     }
   }
 
@@ -391,34 +385,6 @@ export function Dashboard() {
     setSelectedItem(item);
     setAcoesModalVisible(true);
   }
-
-  // Adicione verificação de permissões
-  useEffect(() => {
-    async function checkPermissions() {
-      try {
-        if (Platform.OS === 'android') {
-          const permissions = await PermissionsAndroid.requestMultiple([
-            PermissionsAndroid.PERMISSIONS.WRITE_EXTERNAL_STORAGE,
-            PermissionsAndroid.PERMISSIONS.READ_EXTERNAL_STORAGE,
-          ]);
-
-          if (
-            permissions['android.permission.WRITE_EXTERNAL_STORAGE'] !== 'granted' ||
-            permissions['android.permission.READ_EXTERNAL_STORAGE'] !== 'granted'
-          ) {
-            Alert.alert(
-              'Permissão Necessária',
-              'O app precisa de permissão para acessar o armazenamento para funcionar corretamente.'
-            );
-          }
-        }
-      } catch (err) {
-        console.error('Erro ao verificar permissões:', err);
-      }
-    }
-
-    checkPermissions();
-  }, []);
 
   return (
     <ScrollView style={styles.container}>

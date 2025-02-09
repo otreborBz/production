@@ -1,26 +1,30 @@
 {
   "expo": {
-    "slug": "production", 
+    "name": "productionLaunch",
+    "slug": "production",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/logo.png",
+    "platforms": ["android"],
+    "android": {
+      "package": "com.codebr.production",
+      "versionCode": 7,
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/logo.png",
+        "backgroundColor": "#ffffff"
+      }
+    },
+    "ios": {
+      "bundleIdentifier": "com.codebr.production"
+    },
     "extra": {
       "eas": {
         "projectId": "bb8aa358-6ee7-45c3-ba7f-7588e3c2f1ba"
       }
     },
+    "sdkVersion": "52.0.0",
     "experiments": {
       "newArchEnabled": true
-    },
-    "icon": "./assets/logo.png",
-    "platforms": ["android"], 
-    "android": {
-      "package": "com.codebr.production", 
-      "versionCode": 7,
-      "permissions": [
-        "WRITE_EXTERNAL_STORAGE",
-        "READ_EXTERNAL_STORAGE"
-      ]
-    },
-    "ios": {
-      "bundleIdentifier": "com.codebr.production"
     }
   }
 }

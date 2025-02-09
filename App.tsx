@@ -9,6 +9,7 @@ import { NavigationContainer } from '@react-navigation/native';
 import { ProducaoProvider } from './src/contexts/ProducaoContext';
 import { ProducaoHoraProvider } from './src/contexts/ProducaoHoraContext';
 import { OrdersProvider } from './src/contexts/OrdersContext';
+import { View } from 'react-native';
 
 export default function App() {
   const [modelosBuscados, setModelosBuscados] = useState<Modelo[]>([]);
@@ -34,20 +35,22 @@ export default function App() {
   }
 
   return (
-    <NavigationContainer>
+    <View style={{ flex: 1 }}>
       <SafeAreaProvider>
-        <ModelosProvider>
-          <HomeProvider handleBuscarModelo={handleBuscarModelo}>
-            <ProducaoProvider>
-              <ProducaoHoraProvider>
-                <OrdersProvider>
-                  <Routes />
-                </OrdersProvider>
-              </ProducaoHoraProvider>
-            </ProducaoProvider>
-          </HomeProvider>
-        </ModelosProvider>
+        <NavigationContainer>
+          <ModelosProvider>
+            <HomeProvider handleBuscarModelo={handleBuscarModelo}>
+              <ProducaoProvider>
+                <ProducaoHoraProvider>
+                  <OrdersProvider>
+                    <Routes />
+                  </OrdersProvider>
+                </ProducaoHoraProvider>
+              </ProducaoProvider>
+            </HomeProvider>
+          </ModelosProvider>
+        </NavigationContainer>
       </SafeAreaProvider>
-    </NavigationContainer>
+    </View>
   );
 } 
