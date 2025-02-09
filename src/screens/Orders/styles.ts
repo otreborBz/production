@@ -19,7 +19,7 @@ export const styles = StyleSheet.create({
     fontWeight: 'bold',
   },
   listHeader: {
-    paddingHorizontal: 20,
+    paddingHorizontal: 10,
     paddingVertical: 10,
     borderBottomWidth: 1,
     borderBottomColor: COLORS.border,
@@ -35,6 +35,7 @@ export const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: 'bold',
     color: '#666',
+    textAlign: 'center', // Centraliza o texto do cabeçalho
   },
   actionsHeader: {
     width: 80, // Espaço para os ícones de ação
@@ -52,18 +53,22 @@ export const styles = StyleSheet.create({
     fontSize: 14,
     color: COLORS.text,
     paddingHorizontal: 4,
+    textAlign: 'center', // Centraliza o texto das colunas
   },
   modelColumn: {
     flex: 1.5,
     fontSize: 14,
     color: COLORS.text,
     paddingHorizontal: 4,
+    textAlign: 'center', // Centraliza o texto das colunas
+    justifyContent: 'center', // Adicionado para centralizar verticalmente
   },
   quantityColumn: {
     flex: 0.8,
     fontSize: 14,
     color: COLORS.text,
-    textAlign: 'center',
+    textAlign: 'center', // Centraliza o texto das colunas
+    justifyContent: 'center', // Adicionado para centralizar verticalmente
   },
   orderActions: {
     flexDirection: 'row',
@@ -81,31 +86,57 @@ export const styles = StyleSheet.create({
     padding: 20,
   },
   modalContent: {
-    backgroundColor: '#FFF',
-    padding: 20,
+    backgroundColor: '#fff',
     borderRadius: 8,
+    padding: 20,
+    width: '100%',
+    maxWidth: 400,
     elevation: 5,
+    alignSelf: 'center',
   },
   pickerContainer: {
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    borderRadius: 8,
+    height: 50,
+    width: '100%',
     marginBottom: 15,
-  },
-  pickerLabel: {
-    fontSize: 16,
-    marginBottom: 5,
-    color: '#333',
+    justifyContent: 'center',
+    backgroundColor: '#f5f5f5',
+    overflow: 'hidden',
   },
   picker: {
+    height: 50,
+    width: '100%',
     backgroundColor: '#f5f5f5',
-    borderRadius: 8,
-    marginBottom: 10,
+    color: COLORS.text,
+    marginLeft: -8,
   },
   input: {
     borderWidth: 1,
-    borderColor: '#E5E5E5',
+    borderColor: COLORS.border,
     borderRadius: 8,
     padding: 10,
+    fontSize: 14,
+    height: 50,
+    width: '100%',
     marginBottom: 15,
     backgroundColor: '#f5f5f5',
+  },
+  inputRow: {
+    flexDirection: 'row',
+    gap: 10,
+    marginBottom: 15,
+    width: '100%',
+  },
+  inputColumn: {
+    flex: 1,
+    width: '100%',
+  },
+  label: {
+    fontSize: 14,
+    color: COLORS.text,
+    marginBottom: 8,
   },
   buttonContainer: {
     flexDirection: 'row',
@@ -195,4 +226,21 @@ export const styles = StyleSheet.create({
     justifyContent: 'center',
     elevation: 4,
   },
-}); 
+  clearButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#fff',
+    padding: 12,
+    borderRadius: 8,
+    elevation: 2,
+    position: 'absolute',
+    left: 20,
+    bottom: 20,
+    gap: 8,
+  },
+  clearButtonText: {
+    color: COLORS.danger,
+    fontSize: 14,
+    fontWeight: '500',
+  },
+});

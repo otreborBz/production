@@ -8,12 +8,12 @@ import { Modelo } from './src/contexts/ModelosContext';
 import { NavigationContainer } from '@react-navigation/native';
 import { ProducaoProvider } from './src/contexts/ProducaoContext';
 import { ProducaoHoraProvider } from './src/contexts/ProducaoHoraContext';
+import { OrdersProvider } from './src/contexts/OrdersContext';
 
 export default function App() {
   const [modelosBuscados, setModelosBuscados] = useState<Modelo[]>([]);
 
   function handleBuscarModelo(nomeModelo: string) {
-    // Movemos a lógica para cá para ser compartilhada
     const modeloJaExiste = modelosBuscados.some(m => m.modelo === nomeModelo);
     
     if (!modeloJaExiste) {
@@ -40,7 +40,9 @@ export default function App() {
           <HomeProvider handleBuscarModelo={handleBuscarModelo}>
             <ProducaoProvider>
               <ProducaoHoraProvider>
-                <Routes />
+                <OrdersProvider>
+                  <Routes />
+                </OrdersProvider>
               </ProducaoHoraProvider>
             </ProducaoProvider>
           </HomeProvider>

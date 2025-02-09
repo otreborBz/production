@@ -55,12 +55,14 @@ export function Routes() {
       }}
     >
       <Tab.Screen 
-        name="Dashboard" 
+        name="dashboard" 
         component={Dashboard}
         options={{
           tabBarIcon: ({ size, color }) => (
-            <MaterialIcons name="dashboard" size={size} color={color} />
+            <MaterialIcons name="insert-chart" size={size} color={color} />
           ),
+          tabBarLabel: 'Produção',
+          headerTitle: 'Produção'
         }}
       />
       <Tab.Screen
@@ -68,8 +70,10 @@ export function Routes() {
         component={HomeStack}
         options={{
           tabBarIcon: ({ size, color }) => (
-            <MaterialIcons name="home" size={size} color={color} />
+            <MaterialIcons name="inventory" size={size} color={color} />
           ),
+          tabBarLabel: 'Modelos',
+          headerTitle: 'Modelos'
         }}
       />
       <Tab.Screen

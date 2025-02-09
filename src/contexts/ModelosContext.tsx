@@ -1,5 +1,5 @@
-import React, { createContext, useState, useContext, useEffect } from 'react';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import React, { createContext, useContext, useState, useEffect } from 'react';
+import { storage } from '../services/storage';
 
 export type Modelo = {
   id: string;
@@ -18,9 +18,10 @@ export type Modelo = {
 type ModelosContextData = {
   modelos: Modelo[];
   addModelo: (modelo: Omit<Modelo, 'id'>) => Promise<void>;
-  findModeloByName: (modelo: string) => Modelo | undefined;
-  deleteModelo: (id: string) => Promise<void>;
   updateModelo: (id: string, modelo: Omit<Modelo, 'id'>) => Promise<void>;
+  deleteModelo: (id: string) => Promise<void>;
+  findModeloByName: (name: string) => Modelo | undefined;
+  clearModelos: () => Promise<void>;
 };
 
 const ModelosContext = createContext<ModelosContextData>({} as ModelosContextData);
@@ -29,71 +30,55 @@ export function ModelosProvider({ children }: { children: React.ReactNode }) {
   const [modelos, setModelos] = useState<Modelo[]>([]);
 
   useEffect(() => {
-    loadModelos();
+    async function loadStoredData() {
+      const storedModelos = await storage.getModelos();
+      if (storedModelos) {
+        setModelos(storedModelos);
+      }
+    }
+    loadStoredData();
   }, []);
 
-  async function loadModelos() {
-    try {
-      const storedModelos = await AsyncStorage.getItem('@ProductionApp:modelos');
-      if (storedModelos) {
-        setModelos(JSON.parse(storedModelos));
-      }
-    } catch (error) {
-      console.error('Erro ao carregar modelos:', error);
-    }
-  }
+  useEffect(() => {
+    storage.saveModelos(modelos);
+  }, [modelos]);
 
-  async function addModelo(newModelo: Omit<Modelo, 'id'>) {
-    try {
-      const modelo = {
-        id: String(Date.now()),
-        ...newModelo
-      };
+  async function addModelo(modelo: Omit<Modelo, 'id'>) {
+    const novoModelo: Modelo = {
+      ...modelo,
+      id: String(Date.now()),
+    };
 
-      const updatedModelos = [...modelos, modelo];
-      setModelos(updatedModelos);
-      await AsyncStorage.setItem('@ProductionApp:modelos', JSON.stringify(updatedModelos));
-    } catch (error) {
-      console.error('Erro ao salvar modelo:', error);
-    }
-  }
-
-  function findModeloByName(modeloName: string) {
-    if (!modeloName) return undefined;
-    return modelos.find(m => 
-      m.modelo.toLowerCase().trim() === modeloName.toLowerCase().trim()
-    );
-  }
-
-  async function deleteModelo(id: string) {
-    try {
-      const updatedModelos = modelos.filter(modelo => modelo.id !== id);
-      setModelos(updatedModelos);
-      await AsyncStorage.setItem('@ProductionApp:modelos', JSON.stringify(updatedModelos));
-    } catch (error) {
-      console.error('Erro ao deletar modelo:', error);
-    }
+    setModelos(prev => [...prev, novoModelo]);
   }
 
   async function updateModelo(id: string, modeloAtualizado: Omit<Modelo, 'id'>) {
-    try {
-      const updatedModelos = modelos.map(modelo => 
-        modelo.id === id ? { ...modeloAtualizado, id } : modelo
-      );
-      setModelos(updatedModelos);
-      await AsyncStorage.setItem('@ProductionApp:modelos', JSON.stringify(updatedModelos));
-    } catch (error) {
-      console.error('Erro ao atualizar modelo:', error);
-    }
+    setModelos(prev => prev.map(modelo => 
+      modelo.id === id ? { ...modeloAtualizado, id } : modelo
+    ));
+  }
+
+  async function deleteModelo(id: string) {
+    setModelos(prev => prev.filter(modelo => modelo.id !== id));
+  }
+
+  function findModeloByName(name: string) {
+    return modelos.find(modelo => modelo.modelo === name);
+  }
+
+  async function clearModelos() {
+    await storage.clearModelos();
+    setModelos([]);
   }
 
   return (
-    <ModelosContext.Provider value={{ 
-      modelos, 
-      addModelo, 
-      findModeloByName,
+    <ModelosContext.Provider value={{
+      modelos,
+      addModelo,
+      updateModelo,
       deleteModelo,
-      updateModelo
+      findModeloByName,
+      clearModelos,
     }}>
       {children}
     </ModelosContext.Provider>

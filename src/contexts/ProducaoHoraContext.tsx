@@ -1,4 +1,5 @@
-import React, { createContext, useContext, useState } from 'react';
+import React, { createContext, useContext, useState, useEffect } from 'react';
+import { storage } from '../services/storage';
 
 export type ProducaoHora = {
   id: string;
@@ -6,15 +7,21 @@ export type ProducaoHora = {
   horaFim: string;
   meta: number;
   realProduzido: number;
-  codigoParada?: string;
-  descricaoParada?: string;
-  total: number;
+  turno: string;
+  paradas: Array<{
+    codigo: number;
+    descricao: string;
+    minutosPerdidos: number;
+  }>;
 }
 
 type ProducaoHoraContextData = {
   producoesHora: ProducaoHora[];
-  adicionarProducaoHora: (producao: Omit<ProducaoHora, 'id' | 'total'>) => void;
+  adicionarProducaoHora: (producao: Omit<ProducaoHora, 'id'>) => void;
   buscarProducaoHora: (id: string) => ProducaoHora | undefined;
+  removerProducaoHora: (id: string) => void;
+  clearProducoesHora: () => Promise<void>;
+  atualizarProducaoHora: (id: string, producao: Omit<ProducaoHora, 'id'>) => void;
 }
 
 const ProducaoHoraContext = createContext<ProducaoHoraContextData>({} as ProducaoHoraContextData);
@@ -22,23 +29,71 @@ const ProducaoHoraContext = createContext<ProducaoHoraContextData>({} as Produca
 export function ProducaoHoraProvider({ children }: { children: React.ReactNode }) {
   const [producoesHora, setProducoesHora] = useState<ProducaoHora[]>([]);
 
-  function adicionarProducaoHora(producao: Omit<ProducaoHora, 'id' | 'total'>) {
-    const novaProducao: ProducaoHora = {
-      id: String(Date.now()),
-      ...producao,
-      total: calcularTotal(producao.realProduzido)
+  // Carregar dados salvos quando o app iniciar
+  useEffect(() => {
+    async function loadStoredData() {
+      const storedProducoes = await storage.getProducaoHora();
+      if (storedProducoes) {
+        setProducoesHora(storedProducoes);
+      }
+    }
+    loadStoredData();
+  }, []);
+
+  // Salvar dados sempre que houver mudanças
+  useEffect(() => {
+    storage.saveProducaoHora(producoesHora);
+  }, [producoesHora]);
+
+  function adicionarProducaoHora({ 
+    horaInicio, 
+    horaFim, 
+    meta, 
+    realProduzido,
+    turno,
+    paradas 
+  }: Omit<ProducaoHora, 'id'>) {
+    const id = String(Date.now());
+    const novaProducao = {
+      id,
+      horaInicio,
+      horaFim,
+      meta,
+      realProduzido,
+      turno,
+      paradas
     };
-
-    setProducoesHora(prev => [...prev, novaProducao]);
-  }
-
-  function calcularTotal(realProduzido: number): number {
-    const totalAnterior = producoesHora[producoesHora.length - 1]?.total || 0;
-    return totalAnterior + realProduzido;
+    
+    setProducoesHora(prev => {
+      const updated = [...prev, novaProducao];
+      storage.saveProducaoHora(updated); // Garantir que salve imediatamente
+      return updated;
+    });
   }
 
   function buscarProducaoHora(id: string) {
     return producoesHora.find(producao => producao.id === id);
+  }
+
+  function removerProducaoHora(id: string) {
+    setProducoesHora(prev => {
+      const updated = prev.filter(producao => producao.id !== id);
+      storage.saveProducaoHora(updated); // Garantir que salve imediatamente
+      return updated;
+    });
+  }
+
+  async function clearProducoesHora() {
+    await storage.clearProducaoHora();
+    setProducoesHora([]);
+  }
+
+  function atualizarProducaoHora(id: string, producao: Omit<ProducaoHora, 'id'>) {
+    setProducoesHora(prev => prev.map(item => 
+      item.id === id 
+        ? { ...producao, id } 
+        : item
+    ));
   }
 
   return (
@@ -46,6 +101,9 @@ export function ProducaoHoraProvider({ children }: { children: React.ReactNode }
       producoesHora,
       adicionarProducaoHora,
       buscarProducaoHora,
+      removerProducaoHora,
+      clearProducoesHora,
+      atualizarProducaoHora,
     }}>
       {children}
     </ProducaoHoraContext.Provider>

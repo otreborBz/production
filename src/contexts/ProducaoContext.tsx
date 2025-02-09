@@ -1,4 +1,5 @@
-import React, { createContext, useContext, useState } from 'react';
+import React, { createContext, useContext, useState, useEffect } from 'react';
+import { storage } from '../services/storage';
 
 export type ProducaoDiaria = {
   id: string;
@@ -6,16 +7,21 @@ export type ProducaoDiaria = {
   meta: number;
   marcha: number;
   teste: number;
+  recuperado: number;
   restante: number;
   concluido: boolean;
+  data: string;
+  turno: string;
 }
 
 type ProducaoContextData = {
   producaoDiaria: ProducaoDiaria[];
-  adicionarProducao: (modelo: string, quantidade: number) => void;
+  adicionarProducao: (modelo: string, quantidade: number, data: string, turno: string) => void;
   atualizarMarcha: (id: string, valor: number) => void;
   atualizarTeste: (id: string, valor: number) => void;
+  atualizarRecuperado: (id: string, valor: number) => void;
   removerProducao: (modelo: string) => void;
+  clearProducoes: () => Promise<void>;
 }
 
 const ProducaoContext = createContext<ProducaoContextData>({} as ProducaoContextData);
@@ -23,33 +29,60 @@ const ProducaoContext = createContext<ProducaoContextData>({} as ProducaoContext
 export function ProducaoProvider({ children }: { children: React.ReactNode }) {
   const [producaoDiaria, setProducaoDiaria] = useState<ProducaoDiaria[]>([]);
 
-  function adicionarProducao(modelo: string, quantidade: number) {
+  // Carregar dados salvos quando o app iniciar
+  useEffect(() => {
+    async function loadStoredData() {
+      const storedProducoes = await storage.getProducaoDiaria();
+      if (storedProducoes) {
+        setProducaoDiaria(storedProducoes);
+      }
+    }
+    loadStoredData();
+  }, []);
+
+  // Salvar dados sempre que houver mudanças
+  useEffect(() => {
+    storage.saveProducaoDiaria(producaoDiaria);
+  }, [producaoDiaria]);
+
+  function adicionarProducao(modelo: string, quantidade: number, data: string, turno: string) {
     const novaProducao: ProducaoDiaria = {
       id: String(Date.now()),
       modelo,
       meta: quantidade,
       marcha: 0,
       teste: 0,
+      recuperado: 0,
       restante: quantidade,
       concluido: false,
+      data,
+      turno,
     };
 
-    setProducaoDiaria(prev => [...prev, novaProducao]);
+    setProducaoDiaria(prev => {
+      const updated = [...prev, novaProducao];
+      storage.saveProducaoDiaria(updated); // Garantir que salve imediatamente
+      return updated;
+    });
   }
 
   function atualizarMarcha(id: string, valor: number) {
-    setProducaoDiaria(prev => prev.map(item => {
-      if (item.id === id) {
-        const restante = item.meta - valor;
-        return {
-          ...item,
-          marcha: valor,
-          restante,
-          concluido: restante <= 0
-        };
-      }
-      return item;
-    }));
+    setProducaoDiaria(prev => {
+      const updated = prev.map(item => {
+        if (item.id === id) {
+          const restante = item.meta - valor;
+          return {
+            ...item,
+            marcha: valor,
+            restante,
+            concluido: restante <= 0
+          };
+        }
+        return item;
+      });
+      storage.saveProducaoDiaria(updated); // Garantir que salve imediatamente
+      return updated;
+    });
   }
 
   function atualizarTeste(id: string, valor: number) {
@@ -64,8 +97,26 @@ export function ProducaoProvider({ children }: { children: React.ReactNode }) {
     }));
   }
 
+  function atualizarRecuperado(id: string, valor: number) {
+    setProducaoDiaria(prev => prev.map(item => {
+      if (item.id === id) {
+        return {
+          ...item,
+          recuperado: valor || 0
+        };
+      }
+      return item;
+    }));
+  }
+
   function removerProducao(modelo: string) {
     setProducaoDiaria(prev => prev.filter(item => item.modelo !== modelo));
+  }
+
+  // Adicionar função para limpar dados
+  async function clearProducoes() {
+    await storage.clearProducaoDiaria();
+    setProducaoDiaria([]);
   }
 
   return (
@@ -74,7 +125,9 @@ export function ProducaoProvider({ children }: { children: React.ReactNode }) {
       adicionarProducao,
       atualizarMarcha,
       atualizarTeste,
-      removerProducao
+      atualizarRecuperado,
+      removerProducao,
+      clearProducoes,
     }}>
       {children}
     </ProducaoContext.Provider>
