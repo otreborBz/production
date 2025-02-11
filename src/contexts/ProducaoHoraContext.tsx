@@ -45,30 +45,14 @@ export function ProducaoHoraProvider({ children }: { children: React.ReactNode }
     storage.saveProducaoHora(producoesHora);
   }, [producoesHora]);
 
-  function adicionarProducaoHora({ 
-    horaInicio, 
-    horaFim, 
-    meta, 
-    realProduzido,
-    turno,
-    paradas 
-  }: Omit<ProducaoHora, 'id'>) {
-    const id = String(Date.now());
+  function adicionarProducaoHora(producao: ProducaoHora) {
+    const id = Math.random().toString(36).substr(2, 9); // Gera um ID único
     const novaProducao = {
-      id,
-      horaInicio,
-      horaFim,
-      meta,
-      realProduzido,
-      turno,
-      paradas
+      ...producao,
+      id
     };
     
-    setProducoesHora(prev => {
-      const updated = [...prev, novaProducao];
-      storage.saveProducaoHora(updated); // Garantir que salve imediatamente
-      return updated;
-    });
+    setProducoesHora(producoesAtuais => [...producoesAtuais, novaProducao]);
   }
 
   function buscarProducaoHora(id: string) {

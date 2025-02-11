@@ -619,19 +619,6 @@ export const styles = StyleSheet.create({
     fontSize: 14,
     color: COLORS.text,
   },
-  pickerContainer: {
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    borderRadius: 8,
-    height: 50,
-    justifyContent: 'center',
-    backgroundColor: '#fff',
-    overflow: 'hidden',
-  },
-  picker: {
-    height: 50,
-    width: '100%',
-  },
   acoesButton: {
     padding: 8,
     width: '15%',
@@ -666,5 +653,14 @@ export const styles = StyleSheet.create({
   },
   acaoTextDanger: {
     color: COLORS.danger,
+  },
+  timeText: {
+    fontSize: 16,
+    color: COLORS.text,
+    padding: 10,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    borderRadius: 5,
+    backgroundColor: COLORS.background,
   },
 }); 

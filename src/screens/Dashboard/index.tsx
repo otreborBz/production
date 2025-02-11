@@ -18,6 +18,80 @@ interface Parada {
   minutosPerdidos: number;
 }
 
+// Adicione essa interface e objeto no início do arquivo, após os imports
+interface TurnoHorario {
+  horaInicio: string;
+  horaFim: string;
+}
+
+// Adicione esta interface após as outras interfaces
+interface ProducaoHora {
+  id?: string;
+  horaInicio: string;
+  horaFim: string;
+  meta: number;
+  realProduzido: number;
+  turno: string;
+  paradas: Parada[];
+}
+
+const HORARIOS_TURNO: Record<string, TurnoHorario[]> = {
+  'A': [
+    { horaInicio: '23:21', horaFim: '00:00' },
+    { horaInicio: '00:00', horaFim: '01:00' },
+    { horaInicio: '01:00', horaFim: '02:00' },
+    { horaInicio: '02:00', horaFim: '03:00' },
+    { horaInicio: '03:00', horaFim: '04:00' },
+    { horaInicio: '04:00', horaFim: '05:00' },
+    { horaInicio: '05:00', horaFim: '06:15' },
+  ],
+  'B': [
+    { horaInicio: '06:15', horaFim: '07:00' },
+    { horaInicio: '07:00', horaFim: '08:00' },
+    { horaInicio: '08:00', horaFim: '09:00' },
+    { horaInicio: '09:00', horaFim: '10:00' },
+    { horaInicio: '10:00', horaFim: '11:00' },
+    { horaInicio: '11:00', horaFim: '12:00' },
+    { horaInicio: '12:00', horaFim: '13:00' },
+    { horaInicio: '13:00', horaFim: '14:00' },
+    { horaInicio: '14:00', horaFim: '14:45' },
+  ],
+  'C': [
+    { horaInicio: '14:45', horaFim: '15:00' },
+    { horaInicio: '15:00', horaFim: '16:00' },
+    { horaInicio: '16:00', horaFim: '17:00' },
+    { horaInicio: '17:00', horaFim: '18:00' },
+    { horaInicio: '18:00', horaFim: '19:00' },
+    { horaInicio: '19:00', horaFim: '20:00' },
+    { horaInicio: '20:00', horaFim: '21:00' },
+    { horaInicio: '21:00', horaFim: '22:00' },
+    { horaInicio: '22:00', horaFim: '23:21' },
+  ],
+  'X': [
+    { horaInicio: '06:15', horaFim: '07:00' },
+    { horaInicio: '07:00', horaFim: '08:00' },
+    { horaInicio: '08:00', horaFim: '09:00' },
+    { horaInicio: '09:00', horaFim: '10:00' },
+    { horaInicio: '10:00', horaFim: '11:00' },
+    { horaInicio: '11:00', horaFim: '12:00' },
+    { horaInicio: '12:00', horaFim: '13:00' },
+    { horaInicio: '13:00', horaFim: '14:00' },
+    { horaInicio: '14:00', horaFim: '15:00' },
+    { horaInicio: '15:00', horaFim: '16:03' },
+  ],
+  'Y': [
+    { horaInicio: '16:03', horaFim: '17:00' },
+    { horaInicio: '17:00', horaFim: '18:00' },
+    { horaInicio: '18:00', horaFim: '19:00' },
+    { horaInicio: '19:00', horaFim: '20:00' },
+    { horaInicio: '20:00', horaFim: '21:00' },
+    { horaInicio: '21:00', horaFim: '22:00' },
+    { horaInicio: '22:00', horaFim: '23:00' },
+    { horaInicio: '23:00', horaFim: '00:00' },
+    { horaInicio: '00:00', horaFim: '01:23' },
+  ],
+};
+
 export function Dashboard() {
   const { producaoDiaria, atualizarMarcha, atualizarTeste, removerProducao, clearProducoes, atualizarRecuperado } = useProducao();
   const { 
@@ -342,10 +416,46 @@ export function Dashboard() {
     setSelectedLinha(value);
   };
 
-  // Função para lidar com a mudança de turno
-  const handleTurnoChange = (value: string) => {
+  // Modifique a função handleTurnoChange para criar automaticamente as produções horárias
+  function handleTurnoChange(value: string) {
     setSelectedTurno(value);
-  };
+    
+    // Se houver um turno selecionado, criar as produções horárias
+    if (value && HORARIOS_TURNO[value]) {
+      Alert.alert(
+        'Confirmação',
+        'Deseja criar automaticamente os horários para este turno?',
+        [
+          {
+            text: 'Não',
+            style: 'cancel'
+          },
+          {
+            text: 'Sim',
+            onPress: () => {
+              // Limpar produções existentes
+              clearProducoesHora();
+              
+              // Criar uma produção para cada horário do turno
+              HORARIOS_TURNO[value].forEach(horario => {
+                const producao: ProducaoHora = {
+                  horaInicio: horario.horaInicio,
+                  horaFim: horario.horaFim,
+                  meta: 0,
+                  realProduzido: 0,
+                  turno: value,
+                  paradas: [],
+                };
+                
+                console.log('Adicionando produção:', producao); // Para debug
+                adicionarProducaoHora(producao);
+              });
+            }
+          }
+        ]
+      );
+    }
+  }
 
   // Adicionar função para remover produção diária
   function handleRemoveProducao(modelo: string) {
@@ -384,6 +494,29 @@ export function Dashboard() {
   function handleOpenAcoes(item: ProducaoHora) {
     setSelectedItem(item);
     setAcoesModalVisible(true);
+  }
+
+  // Adicione este useEffect após os outros
+  useEffect(() => {
+    console.log('Produções atualizadas:', producoesHora); // Para debug
+  }, [producoesHora]);
+
+  // Modifique a função que abre o modal de produção hora
+  function handleOpenProducaoHoraModal() {
+    if (!selectedTurno) {
+      Alert.alert('Atenção', 'Selecione um turno antes de adicionar produção');
+      return;
+    }
+    setProducaoHoraModalVisible(true);
+  }
+
+  // Função para ordenar as produções por horário
+  function ordenarProducoesPorHorario(producoes: ProducaoHora[]) {
+    return [...producoes].sort((a, b) => {
+      const [horaA] = a.horaInicio.split(':').map(Number);
+      const [horaB] = b.horaInicio.split(':').map(Number);
+      return horaA - horaB;
+    });
   }
 
   return (
@@ -435,7 +568,7 @@ export function Dashboard() {
               <View style={styles.pickerContainer}>
                 <Picker
                   selectedValue={selectedTurno}
-                  onValueChange={setSelectedTurno}
+                  onValueChange={handleTurnoChange}
                   style={styles.picker}
                 >
                   <Picker.Item label="..." value="" />
@@ -506,7 +639,7 @@ export function Dashboard() {
             <Text style={styles.headerTitle}>Produção Hora x Hora</Text>
             <TouchableOpacity 
               style={styles.addButton}
-              onPress={() => setProducaoHoraModalVisible(true)}
+              onPress={handleOpenProducaoHoraModal}
             >
               <MaterialIcons name="add" size={24} color={COLORS.primary} />
             </TouchableOpacity>
@@ -519,7 +652,7 @@ export function Dashboard() {
             <Text style={[styles.columnHeader, styles.acoesContainer]}>Ações</Text>
           </View>
 
-          {producoesHora.map((item) => (
+          {ordenarProducoesPorHorario(producoesHora).map((item) => (
             <View key={item.id} style={styles.tableRow}>
               <Text style={styles.horaCell}>{`${item.horaInicio} - ${item.horaFim}`}</Text>
               <Text style={styles.realCell}>{item.realProduzido}</Text>
@@ -598,34 +731,39 @@ export function Dashboard() {
             
             <View style={styles.inputRow}>
               <View style={styles.inputColumn}>
-                <Text style={styles.label}>Hora Início</Text>
-                  <TouchableOpacity 
-                    style={styles.timePickerButton}
-                    onPress={() => handleOpenTimePicker('inicio')}
+                <Text style={styles.label}>Selecione o Horário</Text>
+                <View style={styles.pickerContainer}>
+                  <Picker
+                    selectedValue={`${horaInicio}-${horaFim}`}
+                    onValueChange={(value) => {
+                      if (value) {
+                        const [inicio, fim] = value.split('-');
+                        setHoraInicio(inicio);
+                        setHoraFim(fim);
+                      }
+                    }}
+                    style={styles.picker}
                   >
-                    <Text style={styles.timePickerText}>
-                      {horaInicio || 'Selecione'}
-                    </Text>
-                  </TouchableOpacity>
-              </View>
-
-              <View style={styles.inputColumn}>
-                <Text style={styles.label}>Hora Fim</Text>
-                  <TouchableOpacity 
-                    style={[
-                      styles.timePickerButton,
-                      !horaInicio && styles.timePickerButtonDisabled
-                    ]}
-                    onPress={() => horaInicio && handleOpenTimePicker('fim')}
-                    disabled={!horaInicio}
-                  >
-                    <Text style={[
-                      styles.timePickerText,
-                      !horaInicio && styles.timePickerTextDisabled
-                    ]}>
-                      {horaFim || 'Selecione'}
-                    </Text>
-                  </TouchableOpacity>
+                    <Picker.Item label="Selecione..." value="" />
+                    {selectedTurno && HORARIOS_TURNO[selectedTurno] ? 
+                      HORARIOS_TURNO[selectedTurno]
+                        .filter(horario => 
+                          !producoesHora.some(p => 
+                            p.horaInicio === horario.horaInicio && 
+                            p.id !== selectedProducaoHora
+                          )
+                        )
+                        .map((horario, index) => (
+                          <Picker.Item
+                            key={index}
+                            label={`${horario.horaInicio} - ${horario.horaFim}`}
+                            value={`${horario.horaInicio}-${horario.horaFim}`}
+                          />
+                        ))
+                      : null
+                    }
+                  </Picker>
+                </View>
               </View>
             </View>
 
