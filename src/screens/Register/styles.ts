@@ -2,20 +2,29 @@ import { StyleSheet } from 'react-native';
 import { COLORS } from '../../theme/colors';
 
 export const styles = StyleSheet.create({
+  safeArea: {
+    flex: 1,
+    backgroundColor: COLORS.background,
+  },
   container: {
     flex: 1,
-    backgroundColor: '#fff',
+  },
+  scrollContent: {
+    flexGrow: 1,
+  },
+  content: {
+    flex: 1,
     padding: 24,
+    justifyContent: 'center',
   },
   header: {
     alignItems: 'center',
-    marginTop: 80,
-    marginBottom: 48,
+    marginBottom: 32,
   },
   title: {
-    fontSize: 24,
+    fontSize: 28,
     fontWeight: 'bold',
-    color: COLORS.text,
+    color: COLORS.primary,
     marginTop: 16,
   },
   form: {
@@ -23,9 +32,12 @@ export const styles = StyleSheet.create({
   },
   input: {
     height: 56,
-    borderRadius: 8,
-    backgroundColor: '#f5f5f5',
+    borderRadius: 12,
+    backgroundColor: COLORS.white,
     padding: 16,
     fontSize: 16,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    color: COLORS.text,
   },
 }); 

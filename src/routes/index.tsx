@@ -12,7 +12,7 @@ import { NavigationContainer } from '@react-navigation/native';
 import { storage } from '../services/storage';
 import { COLORS } from '../theme/colors';
 import { firebase } from '../services/firebase';
-import { TouchableOpacity, Alert } from 'react-native';
+import { TouchableOpacity, Alert, View, Text, StyleSheet } from 'react-native';
 
 const Tab = createBottomTabNavigator();
 const Stack = createNativeStackNavigator();
@@ -50,6 +50,21 @@ function AuthRoutes() {
 }
 
 function AppRoutes() {
+  const [userName, setUserName] = useState('');
+
+  useEffect(() => {
+    async function loadUserName() {
+      const user = await storage.getLoggedUser();
+      if (user?.email) {
+        // Pegar o nome antes do @ do email
+        const name = user.email.split('@')[0];
+        // Capitalizar a primeira letra
+        setUserName(name.charAt(0).toUpperCase() + name.slice(1));
+      }
+    }
+    loadUserName();
+  }, []);
+
   async function handleLogout() {
     try {
       await firebase.signOut();
@@ -74,6 +89,12 @@ function AppRoutes() {
           >
             <MaterialIcons name="logout" size={24} color="#FFF" />
           </TouchableOpacity>
+        ),
+        headerLeft: () => (
+          <View style={styles.welcomeContainer}>
+            <MaterialIcons name="person" size={24} color="#FFF" />
+            <Text style={styles.welcomeText}>Olá, {userName}</Text>
+          </View>
         ),
         tabBarActiveTintColor: '#fff',
         tabBarInactiveTintColor: '#B0C4DE',
@@ -120,6 +141,20 @@ function AppRoutes() {
     </Tab.Navigator>
   );
 }
+
+const styles = StyleSheet.create({
+  welcomeContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginLeft: 16,
+    gap: 8,
+  },
+  welcomeText: {
+    color: '#FFF',
+    fontSize: 16,
+    fontWeight: '500',
+  },
+});
 
 export function Routes() {
   const [user, setUser] = useState<any>(null);
