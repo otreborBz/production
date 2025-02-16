@@ -663,4 +663,10 @@ export const styles = StyleSheet.create({
     borderRadius: 5,
     backgroundColor: COLORS.background,
   },
+  buttonDisabled: {
+    opacity: 0.5,
+  },
+  buttonTextDisabled: {
+    opacity: 0.5,
+  },
 }); 

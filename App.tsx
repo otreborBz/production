@@ -5,7 +5,6 @@ import { ModelosProvider } from './src/contexts/ModelosContext';
 import { HomeProvider } from './src/contexts/HomeContext';
 import { useState } from 'react';
 import { Modelo } from './src/contexts/ModelosContext';
-import { NavigationContainer } from '@react-navigation/native';
 import { ProducaoProvider } from './src/contexts/ProducaoContext';
 import { ProducaoHoraProvider } from './src/contexts/ProducaoHoraContext';
 import { OrdersProvider } from './src/contexts/OrdersContext';
@@ -37,19 +36,17 @@ export default function App() {
   return (
     <View style={{ flex: 1 }}>
       <SafeAreaProvider>
-        <NavigationContainer>
-          <ModelosProvider>
-            <HomeProvider handleBuscarModelo={handleBuscarModelo}>
-              <ProducaoProvider>
-                <ProducaoHoraProvider>
-                  <OrdersProvider>
-                    <Routes />
-                  </OrdersProvider>
-                </ProducaoHoraProvider>
-              </ProducaoProvider>
-            </HomeProvider>
-          </ModelosProvider>
-        </NavigationContainer>
+        <ModelosProvider>
+          <HomeProvider handleBuscarModelo={handleBuscarModelo}>
+            <ProducaoProvider>
+              <ProducaoHoraProvider>
+                <OrdersProvider>
+                  <Routes />
+                </OrdersProvider>
+              </ProducaoHoraProvider>
+            </ProducaoProvider>
+          </HomeProvider>
+        </ModelosProvider>
       </SafeAreaProvider>
     </View>
   );

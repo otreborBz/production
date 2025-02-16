@@ -32,9 +32,16 @@ export function ProducaoHoraProvider({ children }: { children: React.ReactNode }
   // Carregar dados salvos quando o app iniciar
   useEffect(() => {
     async function loadStoredData() {
-      const storedProducoes = await storage.getProducaoHora();
-      if (storedProducoes) {
-        setProducoesHora(storedProducoes);
+      try {
+        const storedProducoes = await storage.getProducaoHora();
+        if (storedProducoes && Array.isArray(storedProducoes)) {
+          setProducoesHora(storedProducoes);
+        } else {
+          setProducoesHora([]);
+        }
+      } catch (error) {
+        console.error('Erro ao carregar produções:', error);
+        setProducoesHora([]);
       }
     }
     loadStoredData();
@@ -46,13 +53,14 @@ export function ProducaoHoraProvider({ children }: { children: React.ReactNode }
   }, [producoesHora]);
 
   function adicionarProducaoHora(producao: ProducaoHora) {
-    const id = Math.random().toString(36).substr(2, 9); // Gera um ID único
-    const novaProducao = {
-      ...producao,
-      id
-    };
-    
-    setProducoesHora(producoesAtuais => [...producoesAtuais, novaProducao]);
+    setProducoesHora(prev => {
+      // Se já existir uma produção com este ID, atualiza
+      if (producao.id && prev.some(p => p.id === producao.id)) {
+        return prev.map(p => p.id === producao.id ? producao : p);
+      }
+      // Caso contrário, adiciona nova produção
+      return [...prev, producao];
+    });
   }
 
   function buscarProducaoHora(id: string) {
@@ -60,11 +68,7 @@ export function ProducaoHoraProvider({ children }: { children: React.ReactNode }
   }
 
   function removerProducaoHora(id: string) {
-    setProducoesHora(prev => {
-      const updated = prev.filter(producao => producao.id !== id);
-      storage.saveProducaoHora(updated); // Garantir que salve imediatamente
-      return updated;
-    });
+    setProducoesHora(prev => prev.filter(p => p.id !== id));
   }
 
   async function clearProducoesHora() {

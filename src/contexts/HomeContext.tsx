@@ -13,9 +13,10 @@ const HomeContext = createContext<HomeContextData>({} as HomeContextData);
 
 type HomeProviderProps = {
   children: React.ReactNode;
+  handleBuscarModelo: (nomeModelo: string) => void;
 };
 
-export function HomeProvider({ children }: HomeProviderProps) {
+export function HomeProvider({ children, handleBuscarModelo }: HomeProviderProps) {
   const { findModeloByName } = useModelos();
   const [modelosBuscados, setModelosBuscados] = useState<Modelo[]>([]);
 

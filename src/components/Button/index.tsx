@@ -39,11 +39,13 @@ export function Button({
             <MaterialIcons 
               name={icon} 
               size={24} 
-              color="#FFF" 
+              color={variant === 'secondary' ? COLORS.primary : '#FFF'} 
               style={styles.icon}
             />
           )}
-          <Text style={styles.text}>{title}</Text>
+          <Text style={variant === 'secondary' ? styles.secondaryText : styles.text}>
+            {title}
+          </Text>
         </>
       )}
     </TouchableOpacity>

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, TextInput, ScrollView, TouchableOpacity, Modal, Alert, Platform } from 'react-native';
+import { View, Text, TextInput, ScrollView, TouchableOpacity, Modal, Alert, Platform, ActivityIndicator } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import { styles } from './styles';
 import { COLORS } from '../../theme/colors';
@@ -10,6 +10,7 @@ import { useModelos } from '../../contexts/ModelosContext';
 import { pdfGenerator } from '../../services/pdfGenerator';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { storage } from '../../services/storage';
+import { firebase } from '../../services/firebase';
 
 // Adicionar interface para o tipo de parada
 interface Parada {
@@ -129,6 +130,7 @@ export function Dashboard() {
   const [selectedLinha, setSelectedLinha] = useState('');
   const [acoesModalVisible, setAcoesModalVisible] = useState(false);
   const [selectedItem, setSelectedItem] = useState<ProducaoHora | null>(null);
+  const [loading, setLoading] = useState(false);
   
   const LINHAS = ['A', 'B', 'C', 'G', 'H', 'J', 'K', 'L', 'M', 'N', 'VR'];
   const TURNOS = ['A', 'B', 'C', 'X', 'Y'];
@@ -211,33 +213,72 @@ export function Dashboard() {
     setParadas([]);
   }
 
-  // Modificar função de salvar produção hora
-  function handleSalvarProducaoHora() {
+  // Adicionar função para carregar dados do Firebase
+  async function loadProducoesFromFirebase() {
+    try {
+      const producoesFirebase = await firebase.getProducaoHora();
+      if (Array.isArray(producoesFirebase)) {
+        // Limpar produções existentes
+        await clearProducoesHora();
+        
+        // Adicionar novas produções
+        producoesFirebase.forEach(producao => {
+          if (producao && typeof producao === 'object') {
+            adicionarProducaoHora(producao);
+          }
+        });
+      }
+    } catch (error) {
+      console.error('Erro ao carregar produções do Firebase:', error);
+    }
+  }
+
+  // Carregar dados quando o componente montar
+  useEffect(() => {
+    loadProducoesFromFirebase();
+  }, []);
+
+  // Modificar a função handleSaveProducaoHora
+  async function handleSaveProducaoHora() {
     if (!horaInicio || !horaFim || !metaHora || !realProduzido || !selectedTurno) {
-      Alert.alert('Erro', 'Preencha todos os campos obrigatórios');
-      return;
+      return Alert.alert('Erro', 'Preencha todos os campos obrigatórios');
     }
 
-    const producao = {
-      horaInicio,
-      horaFim,
-      meta: Number(metaHora),
-      realProduzido: Number(realProduzido),
-      turno: selectedTurno,
-      paradas: paradas,
-    };
+    setLoading(true);
+    try {
+      const novaProducao = {
+        horaInicio,
+        horaFim,
+        meta: Number(metaHora),
+        realProduzido: Number(realProduzido),
+        turno: selectedTurno,
+        linha: selectedLinha,
+        data: selectedDate.toISOString(),
+        paradas: paradas,
+      };
 
-    if (selectedProducaoHora) {
-      // Edição
-      atualizarProducaoHora(selectedProducaoHora, producao);
-    } else {
-      // Nova produção
-      adicionarProducaoHora(producao);
+      // Primeiro salvar no Firebase
+      const firebaseId = await firebase.saveProducaoHora(novaProducao);
+      
+      // Atualizar o objeto com o ID do Firebase
+      const producaoComId = {
+        ...novaProducao,
+        id: firebaseId
+      };
+
+      // Adicionar à lista local
+      adicionarProducaoHora(producaoComId);
+
+      Alert.alert('Sucesso', 'Produção registrada com sucesso!');
+      setProducaoHoraModalVisible(false);
+      limparCamposProducaoHora();
+      setSelectedProducaoHora(null);
+    } catch (error) {
+      console.error('Erro ao salvar produção:', error);
+      Alert.alert('Erro', 'Ocorreu um erro ao salvar a produção');
+    } finally {
+      setLoading(false);
     }
-
-    setProducaoHoraModalVisible(false);
-    limparCamposProducaoHora();
-    setSelectedProducaoHora(null);
   }
 
   function handleVerDetalhes(id: string) {
@@ -270,26 +311,6 @@ export function Dashboard() {
     setTimePickerVisible(false);
   }
 
-  // Adicionar função para lidar com a exclusão
-  function handleDeleteProducaoHora(id: string) {
-    Alert.alert(
-      'Remover Produção',
-      'Deseja realmente remover esta produção?',
-      [
-        {
-          text: 'Cancelar',
-          style: 'cancel'
-        },
-        {
-          text: 'Confirmar',
-          onPress: () => {
-            removerProducaoHora(id);
-          }
-        }
-      ]
-    );
-  }
-
   // Modificar a função de cálculo de minutos perdidos
   function calcularMinutosPerdidosTotal(meta: number, realProduzido: number): number {
     if (!meta || !realProduzido || isNaN(meta) || isNaN(realProduzido)) {
@@ -315,7 +336,7 @@ export function Dashboard() {
   function handleClearAllData() {
     Alert.alert(
       'Limpar Dados',
-      'Deseja realmente limpar todos os dados de produção?\n\nIsso não afetará os modelos salvos.',
+      'Deseja realmente limpar os dados locais de produção?\n\nIsso não afetará os dados salvos no servidor.',
       [
         {
           text: 'Cancelar',
@@ -324,16 +345,36 @@ export function Dashboard() {
         {
           text: 'Confirmar',
           onPress: async () => {
-            await clearProducoes();
-            await clearProducoesHora();
-            await storage.clearFiltros();
-            
-            // Resetar os estados dos filtros
-            setSelectedDate(new Date());
-            setSelectedLinha('');
-            setSelectedTurno('');
+            try {
+              setLoading(true);
+              
+              // Primeiro limpar os estados do contexto
+              await clearProducoesHora();
+              await clearProducoes();
+              
+              // Depois limpar o storage
+              await storage.clearProducaoHora();
+              await storage.clearProducaoDiaria();
+              await storage.clearFiltros();
+              
+              // Resetar os estados locais
+              setSelectedDate(new Date());
+              setSelectedLinha('');
+              setSelectedTurno('');
+              setParadas([]);
+              setHoraInicio('');
+              setHoraFim('');
+              setMetaHora('');
+              setRealProduzido('');
 
-            Alert.alert('Sucesso', 'Dados de produção limpos com sucesso!');
+              Alert.alert('Sucesso', 'Dados locais limpos com sucesso!');
+              
+            } catch (error) {
+              console.error('Erro ao limpar dados:', error);
+              Alert.alert('Erro', 'Ocorreu um erro ao limpar os dados');
+            } finally {
+              setLoading(false);
+            }
           }
         }
       ]
@@ -416,45 +457,9 @@ export function Dashboard() {
     setSelectedLinha(value);
   };
 
-  // Modifique a função handleTurnoChange para criar automaticamente as produções horárias
+  // Modifique a função handleTurnoChange para simplesmente atualizar o turno
   function handleTurnoChange(value: string) {
     setSelectedTurno(value);
-    
-    // Se houver um turno selecionado, criar as produções horárias
-    if (value && HORARIOS_TURNO[value]) {
-      Alert.alert(
-        'Confirmação',
-        'Deseja criar automaticamente os horários para este turno?',
-        [
-          {
-            text: 'Não',
-            style: 'cancel'
-          },
-          {
-            text: 'Sim',
-            onPress: () => {
-              // Limpar produções existentes
-              clearProducoesHora();
-              
-              // Criar uma produção para cada horário do turno
-              HORARIOS_TURNO[value].forEach(horario => {
-                const producao: ProducaoHora = {
-                  horaInicio: horario.horaInicio,
-                  horaFim: horario.horaFim,
-                  meta: 0,
-                  realProduzido: 0,
-                  turno: value,
-                  paradas: [],
-                };
-                
-                console.log('Adicionando produção:', producao); // Para debug
-                adicionarProducaoHora(producao);
-              });
-            }
-          }
-        ]
-      );
-    }
   }
 
   // Adicionar função para remover produção diária
@@ -510,13 +515,32 @@ export function Dashboard() {
     setProducaoHoraModalVisible(true);
   }
 
-  // Função para ordenar as produções por horário
+  // Modificar a função ordenarProducoesPorHorario
   function ordenarProducoesPorHorario(producoes: ProducaoHora[]) {
+    if (!Array.isArray(producoes)) return [];
+    
     return [...producoes].sort((a, b) => {
       const [horaA] = a.horaInicio.split(':').map(Number);
       const [horaB] = b.horaInicio.split(':').map(Number);
       return horaA - horaB;
     });
+  }
+
+  // Modificar a função handleDeleteProducaoHora
+  async function handleDeleteProducaoHora(id: string) {
+    try {
+      // Deletar no Firebase
+      await firebase.deleteProducaoHora(id);
+      
+      // Remover da lista local
+      removerProducaoHora(id);
+
+      Alert.alert('Sucesso', 'Produção removida com sucesso!');
+      setAcoesModalVisible(false);
+    } catch (error) {
+      console.error('Erro ao remover produção:', error);
+      Alert.alert('Erro', 'Ocorreu um erro ao remover a produção');
+    }
   }
 
   return (
@@ -557,7 +581,7 @@ export function Dashboard() {
                 >
                   <Picker.Item label="..." value="" />
                   {LINHAS.map((linha) => (
-                    <Picker.Item key={linha} label={linha} value={linha} />
+                    <Picker.Item key={`linha-${linha}`} label={linha} value={linha} />
                   ))}
                 </Picker>
               </View>
@@ -573,7 +597,7 @@ export function Dashboard() {
                 >
                   <Picker.Item label="..." value="" />
                   {TURNOS.map((turno) => (
-                    <Picker.Item key={turno} label={turno} value={turno} />
+                    <Picker.Item key={`turno-${turno}`} label={turno} value={turno} />
                   ))}
                 </Picker>
               </View>
@@ -652,7 +676,7 @@ export function Dashboard() {
             <Text style={[styles.columnHeader, styles.acoesContainer]}>Ações</Text>
           </View>
 
-          {ordenarProducoesPorHorario(producoesHora).map((item) => (
+          {Array.isArray(producoesHora) && ordenarProducoesPorHorario(producoesHora).map((item) => (
             <View key={item.id} style={styles.tableRow}>
               <Text style={styles.horaCell}>{`${item.horaInicio} - ${item.horaFim}`}</Text>
               <Text style={styles.realCell}>{item.realProduzido}</Text>
@@ -676,11 +700,21 @@ export function Dashboard() {
         </View>
 
         <TouchableOpacity 
-          style={styles.clearButton}
+          style={[
+            styles.clearButton,
+            loading && styles.buttonDisabled
+          ]}
           onPress={handleClearAllData}
+          disabled={loading}
         >
-          <MaterialIcons name="delete-sweep" size={24} color={COLORS.danger} />
-          <Text style={styles.clearButtonText}>Limpar Dados</Text>
+          {loading ? (
+            <ActivityIndicator size="small" color={COLORS.danger} />
+          ) : (
+            <>
+              <MaterialIcons name="delete-sweep" size={24} color={COLORS.danger} />
+              <Text style={styles.clearButtonText}>Limpar Dados</Text>
+            </>
+          )}
         </TouchableOpacity>
       </View>
 
@@ -755,7 +789,7 @@ export function Dashboard() {
                         )
                         .map((horario, index) => (
                           <Picker.Item
-                            key={index}
+                            key={`horario-${horario.horaInicio}-${horario.horaFim}`}
                             label={`${horario.horaInicio} - ${horario.horaFim}`}
                             value={`${horario.horaInicio}-${horario.horaFim}`}
                           />
@@ -824,7 +858,7 @@ export function Dashboard() {
                   </View>
                   <View style={styles.paradasList}>
                     {paradas.map((parada, index) => (
-                      <View key={index} style={styles.paradaItem}>
+                      <View key={`parada-${index}-${parada.codigo}`} style={styles.paradaItem}>
                         <View style={styles.paradaInfo}>
                           <Text style={styles.paradaCodigo}>Código: {parada.codigo}</Text>
                           <Text style={styles.paradaDescricao}>{parada.descricao}</Text>
@@ -859,14 +893,29 @@ export function Dashboard() {
                   setProducaoHoraModalVisible(false);
                   limparCamposProducaoHora();
                 }}
+                disabled={loading}
               >
-                <Text style={styles.buttonText}>Cancelar</Text>
+                <Text style={[
+                  styles.buttonText,
+                  loading && styles.buttonTextDisabled
+                ]}>
+                  Cancelar
+                </Text>
               </TouchableOpacity>
               <TouchableOpacity
-                style={[styles.modalButton, styles.confirmButton]}
-                onPress={handleSalvarProducaoHora}
+                style={[
+                  styles.modalButton, 
+                  styles.confirmButton,
+                  loading && styles.buttonDisabled
+                ]}
+                onPress={handleSaveProducaoHora}
+                disabled={loading}
               >
-                <Text style={styles.buttonText}>Salvar</Text>
+                {loading ? (
+                  <ActivityIndicator size="small" color="#FFF" />
+                ) : (
+                  <Text style={styles.buttonText}>Salvar</Text>
+                )}
               </TouchableOpacity>
             </View>
           </View>
@@ -900,7 +949,7 @@ export function Dashboard() {
               </View>
 
               {producaoSelecionada?.paradas.map((parada, index) => (
-                <View key={index} style={styles.detalheParada}>
+                <View key={`detalhe-${index}-${parada.codigo}`} style={styles.detalheParada}>
                   <View style={styles.detalheHeader}>
                     <Text style={styles.detalheTitle}>Parada {index + 1}</Text>
                     <Text style={styles.detalheMinutos}>{parada.minutosPerdidos} min</Text>
@@ -937,7 +986,7 @@ export function Dashboard() {
                 <ScrollView style={styles.timePickerScroll}>
                   {Array.from({ length: 24 }, (_, i) => (
                     <TouchableOpacity
-                      key={i}
+                      key={`hour-${i}`}
                       style={[
                         styles.timeOption,
                         tempHour === i.toString().padStart(2, '0') && styles.timeOptionSelected
@@ -960,7 +1009,7 @@ export function Dashboard() {
                 <ScrollView style={styles.timePickerScroll}>
                   {Array.from({ length: 60 }, (_, i) => (
                     <TouchableOpacity
-                      key={i}
+                      key={`minute-${i}`}
                       style={[
                         styles.timeOption,
                         tempMinute === i.toString().padStart(2, '0') && styles.timeOptionSelected
@@ -1104,7 +1153,7 @@ export function Dashboard() {
               <TouchableOpacity
                 style={[styles.modalButton, styles.confirmButton]}
                 onPress={() => {
-                  removerProducaoHora(selectedProducaoHora);
+                  handleDeleteProducaoHora(selectedProducaoHora);
                 }}
               >
                 <Text style={styles.buttonText}>Sim</Text>

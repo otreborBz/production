@@ -8,6 +8,8 @@ const STORAGE_KEYS = {
 };
 
 const ORDERS_COLLECTION = '@codebr:orders';
+const USER_COLLECTION = '@codebr:users';
+const LOGGED_USER = '@codebr:logged_user';
 
 export const storage = {
   async saveProducaoDiaria(data: any) {
@@ -89,8 +91,10 @@ export const storage = {
   async clearProducaoHora() {
     try {
       await AsyncStorage.removeItem(STORAGE_KEYS.PRODUCAO_HORA);
+      console.log('Dados de produção hora limpos do AsyncStorage');
     } catch (error) {
       console.error('Erro ao limpar produção hora:', error);
+      throw error;
     }
   },
 
@@ -156,6 +160,53 @@ export const storage = {
       await AsyncStorage.removeItem(ORDERS_COLLECTION);
     } catch (error) {
       console.error('Erro ao limpar ordens:', error);
+    }
+  },
+
+  async getUsers() {
+    try {
+      const storage = await AsyncStorage.getItem(USER_COLLECTION);
+      return storage ? JSON.parse(storage) : [];
+    } catch (error) {
+      console.error('Erro ao buscar usuários:', error);
+      return [];
+    }
+  },
+
+  async saveUser(user: any) {
+    try {
+      const users = await this.getUsers();
+      users.push(user);
+      await AsyncStorage.setItem(USER_COLLECTION, JSON.stringify(users));
+    } catch (error) {
+      console.error('Erro ao salvar usuário:', error);
+      throw error;
+    }
+  },
+
+  async setLoggedUser(user: any) {
+    try {
+      await AsyncStorage.setItem(LOGGED_USER, JSON.stringify(user));
+    } catch (error) {
+      console.error('Erro ao salvar usuário logado:', error);
+    }
+  },
+
+  async getLoggedUser() {
+    try {
+      const user = await AsyncStorage.getItem(LOGGED_USER);
+      return user ? JSON.parse(user) : null;
+    } catch (error) {
+      console.error('Erro ao buscar usuário logado:', error);
+      return null;
+    }
+  },
+
+  async removeLoggedUser() {
+    try {
+      await AsyncStorage.removeItem(LOGGED_USER);
+    } catch (error) {
+      console.error('Erro ao remover usuário logado:', error);
     }
   },
 }; 

@@ -26,6 +26,11 @@ export const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
   },
+  secondaryText: {
+    color: COLORS.primary,
+    fontSize: 16,
+    fontWeight: '600',
+  },
   icon: {
     marginRight: 8,
   },
