@@ -66,7 +66,7 @@ export function Login() {
         <View style={styles.content}>
           <View style={styles.logoContainer}>
             <MaterialIcons name="analytics" size={80} color={COLORS.primary} />
-            <Text style={styles.title}>Produção Master</Text>
+            <Text style={styles.title}>Produção Launch</Text>
             <Text style={styles.subtitle}>Monitoramento em tempo real</Text>
           </View>
 
