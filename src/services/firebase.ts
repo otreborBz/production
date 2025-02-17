@@ -6,8 +6,9 @@ import {
   signOut,
   User,
   initializeAuth,
-  getReactNativePersistence
+  getReactNativePersistence,
 } from "firebase/auth";
+import ReactNativeAsyncStorage from '@react-native-async-storage/async-storage';
 import { 
   getFirestore, 
   collection, 
@@ -19,25 +20,25 @@ import {
   doc,
   updateDoc
 } from 'firebase/firestore';
-import ReactNativeAsyncStorage from '@react-native-async-storage/async-storage';
 import { storage } from './storage';
 
 const firebaseConfig = {
- //adicionar configuração do firebase
+  apiKey: "AIzaSyASES_8k2Grx0Zo3za5Z0mJuZxoEkSAKio",
+  authDomain: "production-f18dd.firebaseapp.com",
+  projectId: "production-f18dd",
+  storageBucket: "production-f18dd.firebasestorage.app",
+  messagingSenderId: "953263823099",
+  appId: "1:953263823099:web:a1beb9e56f7e2aedd4385e",
+  measurementId: "G-YXRCWH0LVR"
 };
 
 // Initialize Firebase
 const app = initializeApp(firebaseConfig);
 
 // Initialize Auth with persistence
-let auth;
-try {
-  auth = getAuth(app);
-} catch (error) {
-  auth = initializeAuth(app, {
-    persistence: getReactNativePersistence(ReactNativeAsyncStorage)
-  });
-}
+const auth = initializeAuth(app, {
+  persistence: getReactNativePersistence(ReactNativeAsyncStorage)
+});
 
 const db = getFirestore(app);
 

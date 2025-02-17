@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   View, 
   Text, 
@@ -9,7 +9,8 @@ import {
   Platform,
   StatusBar,
   SafeAreaView,
-  ActivityIndicator
+  ActivityIndicator,
+  Button
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { MaterialIcons } from '@expo/vector-icons';
@@ -24,6 +25,21 @@ export function Login() {
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const navigation = useNavigation();
+
+  useEffect(() => {
+    const unsubscribe = firebase.onAuthStateChanged((user) => {
+      if (user) {
+        console.log("Usuário está autenticado:", user);
+        // Redirecionar para a tela principal ou fazer outra ação
+      } else {
+        console.log("Usuário não está autenticado");
+        // Redirecionar para a tela de login
+      }
+    });
+
+    // Limpar o listener quando o componente for desmontado
+    return () => unsubscribe();
+  }, []);
 
   async function handleLogin() {
     if (!email || !password) {
