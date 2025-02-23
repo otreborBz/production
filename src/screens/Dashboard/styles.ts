@@ -262,14 +262,27 @@ export const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: COLORS.border,
     borderRadius: 8,
-    height: 50,
-    justifyContent: 'center',
+    marginBottom: 15,
     backgroundColor: '#fff',
     overflow: 'hidden',
   },
   picker: {
     height: 50,
     width: '100%',
+  },
+  pickerItem: {
+    fontSize: 16,
+  },
+  descricaoContainer: {
+    backgroundColor: '#f5f5f5',
+    padding: 12,
+    borderRadius: 8,
+    marginBottom: 15,
+  },
+  descricaoText: {
+    fontSize: 14,
+    color: COLORS.text,
+    marginTop: 4,
   },
   modalHeader: {
     flexDirection: 'row',
@@ -668,5 +681,31 @@ export const styles = StyleSheet.create({
   },
   buttonTextDisabled: {
     opacity: 0.5,
+  },
+  observacaoInput: {
+    height: 80,
+    textAlignVertical: 'top',
+    paddingTop: 8,
+    marginBottom: 15,
+  },
+  paradaObservacao: {
+    fontSize: 12,
+    color: COLORS.text,
+    fontStyle: 'italic',
+    marginTop: 4,
+    paddingLeft: 8,
+  },
+  offlineBar: {
+    backgroundColor: COLORS.warning,
+    padding: 8,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+  },
+  offlineText: {
+    color: '#fff',
+    fontSize: 14,
+    fontWeight: '500',
   },
 }); 

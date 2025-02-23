@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { View, Text, TextInput, ScrollView, TouchableOpacity, Modal, Alert, Platform, ActivityIndicator } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import { styles } from './styles';
@@ -12,11 +12,15 @@ import DateTimePicker from '@react-native-community/datetimepicker';
 import { storage } from '../../services/storage';
 import { firebase } from '../../services/firebase';
 
-// Adicionar interface para o tipo de parada
+// Modificar a interface Parada
 interface Parada {
   codigo: number;
   descricao: string;
   minutosPerdidos: number;
+  observacao?: string;
+  nomePerda: string;
+  grupoPerda: string;
+  categoria: string;
 }
 
 // Adicione essa interface e objeto no início do arquivo, após os imports
@@ -93,6 +97,332 @@ const HORARIOS_TURNO: Record<string, TurnoHorario[]> = {
   ],
 };
 
+// Atualizar a constante CODIGOS_PARADA para incluir todas as informações
+const CODIGOS_PARADA = [
+  { 
+    codigo: 97,
+    descricao: 'troca de ferramentas programadas',
+    nomePerda: 'troca de ferramentas',
+    grupoPerda: 'disponiblidade',
+    categoria: 'parada programada'
+  },
+  { 
+    codigo: 99,
+    descricao: 'completar/esvaziar linha no inicio/ fim d turno(Inventário)',
+    nomePerda: 'inicio e fim de produção',
+    grupoPerda: 'disponiblidade',
+    categoria: 'produção'
+  },
+  { 
+    codigo: 100,
+    descricao: 'troca de ferramentas sem virada de modelo',
+    nomePerda: 'troca de ferramentas',
+    grupoPerda: 'disponiblidade',
+    categoria: 'produção'
+  },
+  { 
+    codigo: 101,
+    descricao: 'virada de modelo / setup',
+    nomePerda: 'set up e ajustes',
+    grupoPerda: 'disponiblidade',
+    categoria: 'produção'
+  },
+  { 
+    codigo: 102,
+    descricao: 'ausencia de operador',
+    nomePerda: 'perda de gerenciamento',
+    grupoPerda: 'mão de obra',
+    categoria: 'mão de obra'
+  },
+  { 
+    codigo: 103,
+    descricao: 'problema com telesy',
+    nomePerda: 'quebra ou falha',
+    grupoPerda: 'disponiblidade',
+    categoria: 'ti'
+  },
+  { 
+    codigo: 104,
+    descricao: 'retrabalho de peças ou retestes',
+    nomePerda: 'defeito ou retrabalhos',
+    grupoPerda: 'qualidade',
+    categoria: 'qualidade'
+  },
+  { 
+    codigo: 108,
+    descricao: 'enfermaria',
+    nomePerda: 'perda de gerenciamento',
+    grupoPerda: 'mão de obra',
+    categoria: 'mão de obra'
+  },
+  { 
+    codigo: 109,
+    descricao: 'limpeza de maquinas, linha e equipamentos',
+    nomePerda: 'inicio e fim de produção',
+    grupoPerda: 'disponiblidade',
+    categoria: 'produção'
+  },
+  { 
+    codigo: 110,
+    descricao: 'abastecimento de maquinas',
+    nomePerda: 'perda de gerenciamento',
+    grupoPerda: 'disponiblidade',
+    categoria: 'produção'
+  },
+  { 
+    codigo: 111,
+    descricao: 'falta de empilhadeira/ paleteira ou abastecimento incorreto',
+    nomePerda: 'perda de gerenciamento',
+    grupoPerda: 'mão de obra',
+    categoria: 'logistica'
+  },
+  { 
+    codigo: 112,
+    descricao: 'cursos, treinamentos, reunioes, comunicados e palestras',
+    nomePerda: 'perda de organização da linha',
+    grupoPerda: 'mão de obra',
+    categoria: 'mão de obra'
+  },
+  { 
+    codigo: 114,
+    descricao: 'ajustes/ preparação de maquinas ou dispositivos',
+    nomePerda: 'quebra ou falha',
+    grupoPerda: 'disponiblidade',
+    categoria: 'produção'
+  },
+  { 
+    codigo: 142,
+    descricao: 'falta de material de fornecedor interno',
+    nomePerda: 'perda de gerenciamento',
+    grupoPerda: 'mão de obra',
+    categoria: 'produção'
+  },
+  { 
+    codigo: 152,
+    descricao: 'aquecer maquina sem produzir',
+    nomePerda: 'inicio e fim de produção',
+    grupoPerda: 'disponiblidade',
+    categoria: 'produção'
+  },
+  { 
+    codigo: 156,
+    descricao: 'ajuste de temperatura- temp metal',
+    nomePerda: 'set up e ajustes',
+    grupoPerda: 'disponiblidade',
+    categoria: 'produção'
+  },
+  { 
+    codigo: 155,
+    descricao: 'sem programa de produção/ alteração de programa',
+    nomePerda: 'perda de gerenciamento',
+    grupoPerda: 'disponiblidade',
+    categoria: 'sem demanda'
+  },
+  { 
+    codigo: 166,
+    descricao: 'producao de amostras',
+    nomePerda: 'paradas programadas',
+    grupoPerda: 'programada',
+    categoria: 'parada programada'
+  },
+  { 
+    codigo: 173,
+    descricao: 'refeição, ginastica, descanso',
+    nomePerda: 'paradas programadas',
+    grupoPerda: 'programada',
+    categoria: 'parada programada'
+  },
+  { 
+    codigo: 176,
+    descricao: 'virada de metal',
+    nomePerda: 'troca de ferramentas',
+    grupoPerda: 'disponiblidade',
+    categoria: 'produção'
+  },
+  { 
+    codigo: 179,
+    descricao: 'TROCA DE VÁLVULAS / STOPPER POR FALHA DE NEDAÇÃO',
+    nomePerda: 'quebra ou falha',
+    grupoPerda: 'disponiblidade',
+    categoria: 'produção'
+  },
+  { 
+    codigo: 182,
+    descricao: 'Falta de óleo refrigerante (RT ou tanque) / Óleo Hidráulico / Óleo Lubrif',
+    nomePerda: 'perda de gerenciamento',
+    grupoPerda: 'disponiblidade',
+    categoria: 'utilidades'
+  },
+  { 
+    codigo: 183,
+    descricao: 'ARENA SECA OU ÚMIDA - FALHA DO RTC',
+    nomePerda: 'quebra ou falha',
+    grupoPerda: 'disponiblidade',
+    categoria: 'produção'
+  },
+  { 
+    codigo: 184,
+    descricao: 'Desligamento de energia elétrica',
+    nomePerda: 'perda de gerenciamento',
+    grupoPerda: 'disponiblidade',
+    categoria: 'produção'
+  },
+  { 
+    codigo: 200,
+    descricao: 'Manutenção Mecânica',
+    nomePerda: 'quebra ou falha',
+    grupoPerda: 'disponiblidade',
+    categoria: 'manutenção'
+  },
+  { 
+    codigo: 201,
+    descricao: 'Manutenção Elétrica / Eletrônica',
+    nomePerda: 'quebra ou falha',
+    grupoPerda: 'disponiblidade',
+    categoria: 'manutenção'
+  },
+  { 
+    codigo: 202,
+    descricao: 'Manutenção Utilidades (Óleo, Ar Comprimido, Energia Elétrica, Água e relacionados)',
+    nomePerda: 'quebra ou falha',
+    grupoPerda: 'disponiblidade',
+    categoria: 'utilidades'
+  },
+  { 
+    codigo: 203,
+    descricao: 'Manutenção Estrutural (Serralheria)',
+    nomePerda: 'quebra ou falha',
+    grupoPerda: 'disponiblidade',
+    categoria: 'manutenção'
+  },
+  { 
+    codigo: 206,
+    descricao: 'Manutenção programada ou preventiva',
+    nomePerda: 'paradas programadas',
+    grupoPerda: 'programada',
+    categoria: 'parada programada'
+  },
+  { 
+    codigo: 207,
+    descricao: 'Aguardando Manutenção',
+    nomePerda: 'quebra ou falha',
+    grupoPerda: 'disponiblidade',
+    categoria: 'manutenção'
+  },
+  { 
+    codigo: 208,
+    descricao: 'falta de ar comprimido',
+    nomePerda: 'quebra ou falha',
+    grupoPerda: 'disponiblidade',
+    categoria: 'utilidades'
+  },
+  { 
+    codigo: 215,
+    descricao: 'quebra de dispositivo/ ferramenta de maquina',
+    nomePerda: 'quebra ou falha',
+    grupoPerda: 'disponiblidade',
+    categoria: 'almox ferramentas'
+  },
+  { 
+    codigo: 216,
+    descricao: 'falta de demanda',
+    nomePerda: 'paradas programadas',
+    grupoPerda: 'programada',
+    categoria: 'sem demanda'
+  },
+  { 
+    codigo: 218,
+    descricao: 'redução de velocidade ou ciclo fora de padrão',
+    nomePerda: 'redução de velocidade',
+    grupoPerda: 'desempenho',
+    categoria: 'produção'
+  },
+  { 
+    codigo: 219,
+    descricao: 'falta de operador treinado',
+    nomePerda: 'perda de gerenciamento',
+    grupoPerda: 'mão de obra',
+    categoria: 'mão de obra'
+  },
+  { 
+    codigo: 220,
+    descricao: 'linha incompleta',
+    nomePerda: 'perda de organização da linha',
+    grupoPerda: 'mão de obra',
+    categoria: 'produção'
+  },
+  { 
+    codigo: 300,
+    descricao: 'manutenção em aparelhos de medição/ calibradores',
+    nomePerda: 'quebra ou falha',
+    grupoPerda: 'disponiblidade',
+    categoria: 'metrologia'
+  },
+  { 
+    codigo: 303,
+    descricao: 'aguardando analise quimica',
+    nomePerda: 'medições e ajustes',
+    grupoPerda: 'mão de obra',
+    categoria: 'metrologia'
+  },
+  { 
+    codigo: 304,
+    descricao: 'material não conforme',
+    nomePerda: 'defeito ou retrabalhos',
+    grupoPerda: 'qualidade',
+    categoria: 'qualidade'
+  },
+  { 
+    codigo: 400,
+    descricao: 'falta de material de fornecedor externo',
+    nomePerda: 'perda de logistica',
+    grupoPerda: 'mão de obra',
+    categoria: 'logistica'
+  },
+  { 
+    codigo: 401,
+    descricao: 'falta de ferramentas/ dispositivo em estoque ou preparada',
+    nomePerda: 'perda de gerenciamento',
+    grupoPerda: 'mão de obra',
+    categoria: 'almox ferramentas'
+  },
+  { 
+    codigo: 702,
+    descricao: 'operação nao prevista',
+    nomePerda: 'perda de organização da linha',
+    grupoPerda: 'mão de obra',
+    categoria: 'produção'
+  },
+  { 
+    codigo: 703,
+    descricao: 'ajuste pela ferramentaria',
+    nomePerda: 'quebra ou falha',
+    grupoPerda: 'disponiblidade',
+    categoria: 'ferrantaria'
+  },
+  { 
+    codigo: 704,
+    descricao: 'memdiçoes de peças',
+    nomePerda: 'medições e ajustes',
+    grupoPerda: 'mão de obra',
+    categoria: 'produção'
+  },
+  { 
+    codigo: 705,
+    descricao: 'ajuste de equipamentos / maquinas em processo novos pelo EIA - try-out',
+    nomePerda: 'paradas programadas',
+    grupoPerda: 'programada',
+    categoria: 'parada programada'
+  },
+  { 
+    codigo: 706,
+    descricao: 'falta de embalagem para armazenamento de peças',
+    nomePerda: 'perda de logistica',
+    grupoPerda: 'mão de obra',
+    categoria: 'produção'
+  }
+] as const;
+
 export function Dashboard() {
   const { producaoDiaria, atualizarMarcha, atualizarTeste, removerProducao, clearProducoes, atualizarRecuperado } = useProducao();
   const { 
@@ -131,6 +461,8 @@ export function Dashboard() {
   const [acoesModalVisible, setAcoesModalVisible] = useState(false);
   const [selectedItem, setSelectedItem] = useState<ProducaoHora | null>(null);
   const [loading, setLoading] = useState(false);
+  const [observacaoParada, setObservacaoParada] = useState('');
+  const [isOffline, setIsOffline] = useState(false);
   
   const LINHAS = ['A', 'B', 'C', 'G', 'H', 'J', 'K', 'L', 'M', 'N', 'VR'];
   const TURNOS = ['A', 'B', 'C', 'X', 'Y'];
@@ -177,10 +509,10 @@ export function Dashboard() {
     setSelectedModelo(null);
   }
 
-  // Adicionar função para adicionar nova parada
+  // Modificar a função handleAdicionarParada
   function handleAdicionarParada() {
-    if (!codigoParada || !descricaoParada || !minutosPerdidos) {
-      Alert.alert('Erro', 'Preencha todos os campos');
+    if (!codigoParada || !minutosPerdidos) {
+      Alert.alert('Erro', 'Preencha os campos obrigatórios');
       return;
     }
 
@@ -190,15 +522,26 @@ export function Dashboard() {
       return;
     }
 
+    const paradaSelecionada = CODIGOS_PARADA.find(p => p.codigo === Number(codigoParada));
+    if (!paradaSelecionada) {
+      Alert.alert('Erro', 'Código de parada inválido');
+      return;
+    }
+
     setParadas([...paradas, {
-      codigo: Number(codigoParada),
-      descricao: descricaoParada,
-      minutosPerdidos: Number(minutosPerdidos)
+      codigo: paradaSelecionada.codigo,
+      descricao: paradaSelecionada.descricao,
+      minutosPerdidos: Number(minutosPerdidos),
+      observacao: observacaoParada.trim() || undefined,
+      nomePerda: paradaSelecionada.nomePerda,
+      grupoPerda: paradaSelecionada.grupoPerda,
+      categoria: paradaSelecionada.categoria
     }]);
 
     setCodigoParada('');
     setDescricaoParada('');
     setMinutosPerdidos('');
+    setObservacaoParada('');
     setParadaModalVisible(false);
   }
 
@@ -238,56 +581,80 @@ export function Dashboard() {
     loadProducoesFromFirebase();
   }, []);
 
-  // Modificar a função handleSaveProducaoHora
+  // Adicione esta função para lidar com erros de conexão
+  async function handleFirebaseOperation(operation: () => Promise<any>, fallbackOperation?: () => Promise<any>) {
+    try {
+      setLoading(true);
+      await operation();
+    } catch (error: any) {
+      console.error('Erro na operação:', error);
+      
+      if (error.code === 'unavailable' || error.message?.includes('backend')) {
+        setIsOffline(true);
+        Alert.alert(
+          'Modo Offline',
+          'Você está no modo offline. As alterações serão salvas localmente e sincronizadas quando houver conexão.',
+          [{ text: 'OK' }]
+        );
+        
+        // Se houver uma operação de fallback (salvamento local), execute-a
+        if (fallbackOperation) {
+          try {
+            await fallbackOperation();
+          } catch (localError) {
+            console.error('Erro ao salvar localmente:', localError);
+            Alert.alert('Erro', 'Não foi possível salvar os dados localmente');
+          }
+        }
+      } else {
+        Alert.alert('Erro', 'Ocorreu um erro ao processar a operação');
+      }
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  // Modifique a função handleSaveProducaoHora
   async function handleSaveProducaoHora() {
     if (!horaInicio || !horaFim || !metaHora || !realProduzido || !selectedTurno) {
       return Alert.alert('Erro', 'Preencha todos os campos obrigatórios');
     }
 
-    setLoading(true);
-    try {
-      const novaProducao = {
-        horaInicio,
-        horaFim,
-        meta: Number(metaHora),
-        realProduzido: Number(realProduzido),
-        turno: selectedTurno,
-        linha: selectedLinha,
-        data: selectedDate.toISOString(),
-        paradas: paradas,
-      };
+    const novaProducao = {
+      horaInicio,
+      horaFim,
+      meta: Number(metaHora),
+      realProduzido: Number(realProduzido),
+      turno: selectedTurno,
+      linha: selectedLinha,
+      data: selectedDate.toISOString(),
+      paradas: paradas,
+    };
 
-      // Se tiver um ID selecionado, é uma edição
-      if (selectedProducaoHora) {
-        // Atualizar no Firebase
-        await firebase.updateProducaoHora(selectedProducaoHora, novaProducao);
-        
-        // Atualizar localmente
-        atualizarProducaoHora(selectedProducaoHora, novaProducao);
-        
-        Alert.alert('Sucesso', 'Produção atualizada com sucesso!');
-      } else {
-        // Criar nova produção
-        const firebaseId = await firebase.saveProducaoHora(novaProducao);
-        
-        const producaoComId = {
-          ...novaProducao,
-          id: firebaseId
-        };
-
-        adicionarProducaoHora(producaoComId);
-        Alert.alert('Sucesso', 'Produção registrada com sucesso!');
+    await handleFirebaseOperation(
+      async () => {
+        if (selectedProducaoHora) {
+          await firebase.updateProducaoHora(selectedProducaoHora, novaProducao);
+          atualizarProducaoHora(selectedProducaoHora, novaProducao);
+          Alert.alert('Sucesso', 'Produção atualizada com sucesso!');
+        } else {
+          const firebaseId = await firebase.saveProducaoHora(novaProducao);
+          adicionarProducaoHora({ ...novaProducao, id: firebaseId });
+          Alert.alert('Sucesso', 'Produção registrada com sucesso!');
+        }
+      },
+      async () => {
+        // Operação de fallback: salvar apenas localmente
+        const localId = `local_${Date.now()}`;
+        const producaoLocal = { ...novaProducao, id: localId, pendingSync: true };
+        adicionarProducaoHora(producaoLocal);
+        await storage.saveProducaoHora(producaoLocal);
       }
+    );
 
-      setProducaoHoraModalVisible(false);
-      limparCamposProducaoHora();
-      setSelectedProducaoHora(null);
-    } catch (error) {
-      console.error('Erro ao salvar produção:', error);
-      Alert.alert('Erro', 'Ocorreu um erro ao salvar a produção');
-    } finally {
-      setLoading(false);
-    }
+    setProducaoHoraModalVisible(false);
+    limparCamposProducaoHora();
+    setSelectedProducaoHora(null);
   }
 
   function handleVerDetalhes(id: string) {
@@ -528,15 +895,32 @@ export function Dashboard() {
     setProducaoHoraModalVisible(true);
   }
 
+  // Adicione esta função auxiliar
+  function compararHorarios(a: ProducaoHora, b: ProducaoHora): number {
+    // Função para converter hora em minutos desde o início do dia anterior
+    function horaParaMinutos(hora: string): number {
+      const [h, m] = hora.split(':').map(Number);
+      let minutos = h * 60 + m;
+      
+      // Se a hora for entre 00:00 e 06:00, adiciona 24 horas
+      if (h >= 0 && h < 6) {
+        minutos += 24 * 60;
+      }
+      
+      return minutos;
+    }
+
+    const minutosA = horaParaMinutos(a.horaInicio);
+    const minutosB = horaParaMinutos(b.horaInicio);
+    
+    return minutosA - minutosB;
+  }
+
   // Modificar a função ordenarProducoesPorHorario
   function ordenarProducoesPorHorario(producoes: ProducaoHora[]) {
     if (!Array.isArray(producoes)) return [];
     
-    return [...producoes].sort((a, b) => {
-      const [horaA] = a.horaInicio.split(':').map(Number);
-      const [horaB] = b.horaInicio.split(':').map(Number);
-      return horaA - horaB;
-    });
+    return [...producoes].sort(compararHorarios);
   }
 
   // Modificar a função handleDeleteProducaoHora
@@ -556,8 +940,51 @@ export function Dashboard() {
     }
   }
 
+  const producoesOrdenadas = useMemo(() => {
+    return [...producoesHora].sort(compararHorarios);
+  }, [producoesHora]);
+
+  // Adicione um useEffect para monitorar a conexão e sincronizar quando voltar
+  useEffect(() => {
+    let unsubscribe: any;
+
+    async function setupConnectivityListener() {
+      unsubscribe = firebase.onConnectionStateChanged(async (isConnected) => {
+        if (isConnected && isOffline) {
+          setIsOffline(false);
+          
+          // Tenta sincronizar dados pendentes
+          try {
+            const localProducoes = await storage.getProducaoHora();
+            const pendingSyncs = localProducoes.filter(p => p.pendingSync);
+            
+            for (const producao of pendingSyncs) {
+              const { id, pendingSync, ...producaoData } = producao;
+              const firebaseId = await firebase.saveProducaoHora(producaoData);
+              await storage.updateProducaoHora(id, { ...producaoData, id: firebaseId, pendingSync: false });
+            }
+            
+            // Recarrega os dados após sincronização
+            await loadProducoesFromFirebase();
+          } catch (error) {
+            console.error('Erro ao sincronizar dados:', error);
+          }
+        }
+      });
+    }
+
+    setupConnectivityListener();
+    return () => unsubscribe?.();
+  }, [isOffline]);
+
   return (
     <ScrollView style={styles.container}>
+      {isOffline && (
+        <View style={styles.offlineBar}>
+          <MaterialIcons name="cloud-off" size={20} color="#fff" />
+          <Text style={styles.offlineText}>Modo Offline</Text>
+        </View>
+      )}
       <View style={styles.content}>
         <View style={styles.filterContainer}>
           <View style={styles.dateRow}>
@@ -689,7 +1116,7 @@ export function Dashboard() {
             <Text style={[styles.columnHeader, styles.acoesContainer]}>Ações</Text>
           </View>
 
-          {Array.isArray(producoesHora) && ordenarProducoesPorHorario(producoesHora).map((item) => (
+          {Array.isArray(producoesOrdenadas) && producoesOrdenadas.map((item) => (
             <View key={item.id} style={styles.tableRow}>
               <Text style={styles.horaCell}>{`${item.horaInicio} - ${item.horaFim}`}</Text>
               <Text style={styles.realCell}>{item.realProduzido}</Text>
@@ -1087,6 +1514,38 @@ export function Dashboard() {
               {paradas.length === 0 ? 'Adicionar Primeira Parada' : 'Adicionar Nova Parada'}
             </Text>
 
+            <Text style={styles.label}>Código da Parada</Text>
+            <View style={styles.pickerContainer}>
+              <Picker
+                selectedValue={codigoParada}
+                onValueChange={(itemValue) => {
+                  setCodigoParada(itemValue);
+                  const parada = CODIGOS_PARADA.find(p => p.codigo === Number(itemValue));
+                  if (parada) {
+                    setDescricaoParada(parada.descricao);
+                  }
+                }}
+                style={styles.picker}
+              >
+                <Picker.Item label="Selecione um código" value="" />
+                {CODIGOS_PARADA.map((parada) => (
+                  <Picker.Item 
+                    key={parada.codigo}
+                    label={`${parada.codigo} - ${parada.descricao}`}
+                    value={String(parada.codigo)}
+                    style={styles.pickerItem}
+                  />
+                ))}
+              </Picker>
+            </View>
+
+            {codigoParada && (
+              <View style={styles.descricaoContainer}>
+                <Text style={styles.label}>Descrição:</Text>
+                <Text style={styles.descricaoText}>{descricaoParada}</Text>
+              </View>
+            )}
+
             <Text style={styles.label}>Minutos Perdidos</Text>
             <Text style={styles.minutosInfo}>
               Minutos restantes a justificar: {calcularMinutosRestantes()}
@@ -1099,22 +1558,14 @@ export function Dashboard() {
               keyboardType="numeric"
             />
 
-            <Text style={styles.label}>Código da Parada</Text>
+            <Text style={styles.label}>Detalhes da Parada (opcional)</Text>
             <TextInput
-              style={[styles.input, styles.codigoInput]}
-              value={codigoParada}
-              onChangeText={setCodigoParada}
-              placeholder="Código"
-              keyboardType="numeric"
-            />
-
-            <Text style={styles.label}>Descrição da Parada</Text>
-            <TextInput
-              style={[styles.input, styles.descricaoInput]}
-              value={descricaoParada}
-              onChangeText={setDescricaoParada}
-              placeholder="Descrição"
+              style={[styles.input, styles.observacaoInput]}
+              value={observacaoParada}
+              onChangeText={setObservacaoParada}
+              placeholder="Adicione detalhes sobre a parada"
               multiline
+              numberOfLines={3}
             />
 
             <View style={styles.modalButtons}>
@@ -1125,6 +1576,7 @@ export function Dashboard() {
                   setCodigoParada('');
                   setDescricaoParada('');
                   setMinutosPerdidos('');
+                  setObservacaoParada('');
                 }}
               >
                 <Text style={styles.buttonText}>Cancelar</Text>
@@ -1133,10 +1585,10 @@ export function Dashboard() {
                 style={[
                   styles.modalButton, 
                   styles.confirmButton,
-                  calcularMinutosRestantes() < Number(minutosPerdidos) && styles.modalButtonDisabled
+                  (!codigoParada || !minutosPerdidos || calcularMinutosRestantes() < Number(minutosPerdidos)) && styles.modalButtonDisabled
                 ]}
                 onPress={handleAdicionarParada}
-                disabled={calcularMinutosRestantes() < Number(minutosPerdidos)}
+                disabled={!codigoParada || !minutosPerdidos || calcularMinutosRestantes() < Number(minutosPerdidos)}
               >
                 <Text style={styles.buttonText}>Adicionar</Text>
               </TouchableOpacity>
