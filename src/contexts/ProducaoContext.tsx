@@ -70,7 +70,7 @@ export function ProducaoProvider({ children }: { children: React.ReactNode }) {
     setProducaoDiaria(prev => {
       const updated = prev.map(item => {
         if (item.id === id) {
-          const restante = item.meta - valor;
+          const restante = valor === 0 ? item.meta : item.meta - valor;
           return {
             ...item,
             marcha: valor,
@@ -80,7 +80,7 @@ export function ProducaoProvider({ children }: { children: React.ReactNode }) {
         }
         return item;
       });
-      storage.saveProducaoDiaria(updated); // Garantir que salve imediatamente
+      storage.saveProducaoDiaria(updated);
       return updated;
     });
   }

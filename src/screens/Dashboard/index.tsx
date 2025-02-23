@@ -314,11 +314,15 @@ export function Dashboard() {
   // Modificar a função de cálculo de minutos perdidos
   function calcularMinutosPerdidosTotal(meta: number, realProduzido: number): number {
     if (!meta || !realProduzido || isNaN(meta) || isNaN(realProduzido)) {
-      return 0;
+      return 60; // Retorna 60 minutos quando não há produção
+    }
+    
+    if (realProduzido === 0) {
+      return 60; // Retorna 60 minutos quando a produção é zero
     }
     
     const producaoPorMinuto = meta / 60;
-    if (producaoPorMinuto <= 0) return 0;
+    if (producaoPorMinuto <= 0) return 60;
     
     const minutosNecessarios = Math.ceil((meta - realProduzido) / producaoPorMinuto);
     return Math.max(0, minutosNecessarios);

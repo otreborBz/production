@@ -84,6 +84,17 @@ export function ProducaoHoraProvider({ children }: { children: React.ReactNode }
     ));
   }
 
+  // Procure a função ou cálculo que determina os minutos restantes
+  // Deve ser algo similar a:
+  const calculateRemainingMinutes = (hour: number) => {
+    // Se a hora for 0, retornamos 60 minutos
+    if (hour === 0) {
+      return 60;
+    }
+    // Caso contrário, calculamos os minutos restantes normalmente
+    return 60 - (hour % 1) * 60;
+  };
+
   return (
     <ProducaoHoraContext.Provider value={{
       producoesHora,
