@@ -257,19 +257,28 @@ export function Dashboard() {
         paradas: paradas,
       };
 
-      // Primeiro salvar no Firebase
-      const firebaseId = await firebase.saveProducaoHora(novaProducao);
-      
-      // Atualizar o objeto com o ID do Firebase
-      const producaoComId = {
-        ...novaProducao,
-        id: firebaseId
-      };
+      // Se tiver um ID selecionado, é uma edição
+      if (selectedProducaoHora) {
+        // Atualizar no Firebase
+        await firebase.updateProducaoHora(selectedProducaoHora, novaProducao);
+        
+        // Atualizar localmente
+        atualizarProducaoHora(selectedProducaoHora, novaProducao);
+        
+        Alert.alert('Sucesso', 'Produção atualizada com sucesso!');
+      } else {
+        // Criar nova produção
+        const firebaseId = await firebase.saveProducaoHora(novaProducao);
+        
+        const producaoComId = {
+          ...novaProducao,
+          id: firebaseId
+        };
 
-      // Adicionar à lista local
-      adicionarProducaoHora(producaoComId);
+        adicionarProducaoHora(producaoComId);
+        Alert.alert('Sucesso', 'Produção registrada com sucesso!');
+      }
 
-      Alert.alert('Sucesso', 'Produção registrada com sucesso!');
       setProducaoHoraModalVisible(false);
       limparCamposProducaoHora();
       setSelectedProducaoHora(null);
