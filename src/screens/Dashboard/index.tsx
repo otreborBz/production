@@ -37,7 +37,10 @@ interface ProducaoHora {
   meta: number;
   realProduzido: number;
   turno: string;
+  linha: string;
+  data: string;
   paradas: Parada[];
+  pendingSync?: boolean;
 }
 
 const HORARIOS_TURNO: Record<string, TurnoHorario[]> = {
@@ -528,16 +531,20 @@ export function Dashboard() {
       return;
     }
 
-    setParadas([...paradas, {
+    const novaParada: Parada = {
       codigo: paradaSelecionada.codigo,
       descricao: paradaSelecionada.descricao,
       minutosPerdidos: Number(minutosPerdidos),
-      observacao: observacaoParada.trim() || undefined,
       nomePerda: paradaSelecionada.nomePerda,
       grupoPerda: paradaSelecionada.grupoPerda,
       categoria: paradaSelecionada.categoria
-    }]);
+    };
 
+    if (observacaoParada.trim()) {
+      novaParada.observacao = observacaoParada.trim();
+    }
+
+    setParadas([...paradas, novaParada]);
     setCodigoParada('');
     setDescricaoParada('');
     setMinutosPerdidos('');
@@ -620,7 +627,7 @@ export function Dashboard() {
       return Alert.alert('Erro', 'Preencha todos os campos obrigatórios');
     }
 
-    const novaProducao = {
+    const novaProducao: ProducaoHora = {
       horaInicio,
       horaFim,
       meta: Number(metaHora),
@@ -628,23 +635,22 @@ export function Dashboard() {
       turno: selectedTurno,
       linha: selectedLinha,
       data: selectedDate.toISOString(),
-      paradas: paradas,
+      paradas: paradas
     };
 
     await handleFirebaseOperation(
       async () => {
-        if (selectedProducaoHora) {
-          await firebase.updateProducaoHora(selectedProducaoHora, novaProducao);
-          atualizarProducaoHora(selectedProducaoHora, novaProducao);
+        if (selectedProducaoHora?.id) {
+          await firebase.updateProducaoHora(selectedProducaoHora.id, novaProducao);
+          atualizarProducaoHora(selectedProducaoHora.id, novaProducao);
           Alert.alert('Sucesso', 'Produção atualizada com sucesso!');
         } else {
-          const firebaseId = await firebase.saveProducaoHora(novaProducao);
-          adicionarProducaoHora({ ...novaProducao, id: firebaseId });
+          const docRef = await firebase.saveProducaoHora(novaProducao);
+          adicionarProducaoHora({ ...novaProducao, id: docRef.id });
           Alert.alert('Sucesso', 'Produção registrada com sucesso!');
         }
       },
       async () => {
-        // Operação de fallback: salvar apenas localmente
         const localId = `local_${Date.now()}`;
         const producaoLocal = { ...novaProducao, id: localId, pendingSync: true };
         adicionarProducaoHora(producaoLocal);

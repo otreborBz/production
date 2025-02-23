@@ -1,18 +1,27 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { storage } from '../services/storage';
 
-export type ProducaoHora = {
-  id: string;
+interface Parada {
+  codigo: number;
+  descricao: string;
+  minutosPerdidos: number;
+  observacao?: string;
+  nomePerda: string;
+  grupoPerda: string;
+  categoria: string;
+}
+
+interface ProducaoHora {
+  id?: string;
   horaInicio: string;
   horaFim: string;
   meta: number;
   realProduzido: number;
   turno: string;
-  paradas: Array<{
-    codigo: number;
-    descricao: string;
-    minutosPerdidos: number;
-  }>;
+  linha: string;
+  data: string;
+  paradas: Parada[];
+  pendingSync?: boolean;
 }
 
 type ProducaoHoraContextData = {

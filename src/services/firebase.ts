@@ -180,5 +180,20 @@ export const firebase = {
     } catch (error: any) {
       throw new Error(error.message);
     }
-  }
+  },
+
+  onConnectionStateChanged: (callback: (isConnected: boolean) => void) => {
+    return db.enableNetwork()
+      .then(() => callback(true))
+      .catch(() => callback(false));
+  },
+
+  saveProducaoHora: async (data: any) => {
+    const docRef = await addDoc(collection(db, COLLECTIONS.PRODUCAO_HORA), data);
+    return docRef;
+  },
+
+  updateProducaoHora: async (id: string, data: any) => {
+    await updateDoc(doc(db, COLLECTIONS.PRODUCAO_HORA, id), data);
+  },
 }; 
