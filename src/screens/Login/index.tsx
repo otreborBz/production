@@ -10,7 +10,8 @@ import {
   StatusBar,
   SafeAreaView,
   ActivityIndicator,
-  Button
+  Button,
+  Image
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { MaterialIcons } from '@expo/vector-icons';
@@ -81,8 +82,12 @@ export function Login() {
       >
         <View style={styles.content}>
           <View style={styles.logoContainer}>
-            <MaterialIcons name="analytics" size={80} color={COLORS.primary} />
-            <Text style={styles.title}>Produção Launch</Text>
+            <Image 
+              source={require('../../assets/logo.png')}
+              style={styles.logo}
+              resizeMode="contain"
+            />
+            <Text style={styles.title}>Production</Text>
             <Text style={styles.subtitle}>Monitoramento em tempo real</Text>
           </View>
 

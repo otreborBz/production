@@ -91,5 +91,10 @@ export const styles = StyleSheet.create({
   },
   buttonDisabled: {
     opacity: 0.7,
-  }
+  },
+  logo: {
+    width: 200,
+    height: 80,
+    marginBottom: 20,
+  },
 }); 

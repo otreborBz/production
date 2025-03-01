@@ -24,12 +24,12 @@ android {
     buildToolsVersion rootProject.ext.buildToolsVersion
     compileSdk rootProject.ext.compileSdkVersion
 
-    namespace "com.otrebor.production"
+    namespace 'com.codebr.production'
     defaultConfig {
-        applicationId 'com.otrebor.production'
+        applicationId 'com.codebr.production'
         minSdkVersion rootProject.ext.minSdkVersion // Usando a versão do rootProject
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 1
+        versionCode 7
         versionName "1.0.0"
         multiDexEnabled true
     }
