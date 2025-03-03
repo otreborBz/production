@@ -563,23 +563,56 @@ export function Dashboard() {
     setParadas([]);
   }
 
-  // Adicionar função para carregar dados do Firebase
+  // Adicionar função para carregar dados do Firebase e Storage
   async function loadProducoesFromFirebase() {
     try {
+      // Primeiro tenta carregar dados locais
+      const localProducoes = await storage.getProducaoHora();
+      if (localProducoes && Array.isArray(localProducoes) && localProducoes.length > 0) {
+        // Se tiver dados locais, usa eles primeiro
+        await clearProducoesHora();
+        localProducoes.forEach(producao => {
+          if (producao && typeof producao === 'object' && 'horaInicio' in producao) {
+            adicionarProducaoHora(producao as ProducaoHora);
+          }
+        });
+      }
+
+      // Depois tenta carregar do Firebase
       const producoesFirebase = await firebase.getProducaoHora();
-      if (Array.isArray(producoesFirebase)) {
+      if (Array.isArray(producoesFirebase) && producoesFirebase.length > 0) {
         // Limpar produções existentes
         await clearProducoesHora();
         
         // Adicionar novas produções
+        const producoesParaSalvar: ProducaoHora[] = [];
         producoesFirebase.forEach(producao => {
-          if (producao && typeof producao === 'object') {
-            adicionarProducaoHora(producao);
+          if (producao && typeof producao === 'object' && 'horaInicio' in producao) {
+            const producaoHora = producao as ProducaoHora;
+            adicionarProducaoHora(producaoHora);
+            producoesParaSalvar.push(producaoHora);
           }
         });
+
+        // Salvar no storage local
+        await storage.saveProducaoHora(producoesParaSalvar);
       }
     } catch (error) {
-      console.error('Erro ao carregar produções do Firebase:', error);
+      console.error('Erro ao carregar produções:', error);
+      // Se falhar ao carregar do Firebase, tenta carregar do storage local
+      try {
+        const localProducoes = await storage.getProducaoHora();
+        if (localProducoes && Array.isArray(localProducoes)) {
+          await clearProducoesHora();
+          localProducoes.forEach(producao => {
+            if (producao && typeof producao === 'object' && 'horaInicio' in producao) {
+              adicionarProducaoHora(producao as ProducaoHora);
+            }
+          });
+        }
+      } catch (storageError) {
+        console.error('Erro ao carregar produções do storage:', storageError);
+      }
     }
   }
 
@@ -621,40 +654,68 @@ export function Dashboard() {
     }
   }
 
-  // Modifique a função handleSaveProducaoHora
+  // Adicionar função auxiliar para formatar a data corretamente
+  function formatDateToISO(date: Date): string {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}T00:00:00.000Z`;
+  }
+
+  // Modificar handleSaveProducaoHora para usar a nova função de data
   async function handleSaveProducaoHora() {
     if (!horaInicio || !horaFim || !metaHora || !realProduzido || !selectedTurno) {
       return Alert.alert('Erro', 'Preencha todos os campos obrigatórios');
     }
 
-    const novaProducao: ProducaoHora = {
+    const novaProducao: Omit<ProducaoHora, 'id'> = {
       horaInicio,
       horaFim,
       meta: Number(metaHora),
       realProduzido: Number(realProduzido),
       turno: selectedTurno,
       linha: selectedLinha,
-      data: selectedDate.toISOString(),
+      data: formatDateToISO(selectedDate),
       paradas: paradas
     };
 
     await handleFirebaseOperation(
       async () => {
-        if (selectedProducaoHora?.id) {
-          await firebase.updateProducaoHora(selectedProducaoHora.id, novaProducao);
-          atualizarProducaoHora(selectedProducaoHora.id, novaProducao);
+        if (selectedProducaoHora) {
+          // Atualização
+          await firebase.updateProducaoHora(selectedProducaoHora, novaProducao);
+          atualizarProducaoHora(selectedProducaoHora, novaProducao);
+          
+          // Atualizar no storage local
+          const localProducoes = await storage.getProducaoHora() || [];
+          const updatedProducoes = localProducoes.map((p: ProducaoHora) => 
+            p.id === selectedProducaoHora ? { ...novaProducao, id: selectedProducaoHora } : p
+          );
+          await storage.saveProducaoHora(updatedProducoes);
+          
           Alert.alert('Sucesso', 'Produção atualizada com sucesso!');
         } else {
+          // Nova produção
           const docRef = await firebase.saveProducaoHora(novaProducao);
-          adicionarProducaoHora({ ...novaProducao, id: docRef.id });
+          const novaProducaoComId = { ...novaProducao, id: docRef.id };
+          adicionarProducaoHora(novaProducaoComId);
+          
+          // Salvar no storage local
+          const localProducoes = await storage.getProducaoHora() || [];
+          await storage.saveProducaoHora([...localProducoes, novaProducaoComId]);
+          
           Alert.alert('Sucesso', 'Produção registrada com sucesso!');
         }
       },
       async () => {
+        // Modo offline
         const localId = `local_${Date.now()}`;
         const producaoLocal = { ...novaProducao, id: localId, pendingSync: true };
         adicionarProducaoHora(producaoLocal);
-        await storage.saveProducaoHora(producaoLocal);
+        
+        // Salvar no storage local
+        const localProducoes = await storage.getProducaoHora() || [];
+        await storage.saveProducaoHora([...localProducoes, producaoLocal]);
       }
     );
 
@@ -821,10 +882,10 @@ export function Dashboard() {
     loadStoredFiltros();
   }, []);
 
-  // Salvar filtros quando houver mudanças
+  // Modificar o useEffect dos filtros para usar a nova função de data
   useEffect(() => {
     storage.saveFiltros({
-      data: selectedDate.toISOString(),
+      data: formatDateToISO(selectedDate),
       linha: selectedLinha,
       turno: selectedTurno,
     });
@@ -875,7 +936,7 @@ export function Dashboard() {
     setMetaHora(producao.meta.toString());
     setRealProduzido(producao.realProduzido.toString());
     setParadas(producao.paradas);
-    setSelectedProducaoHora(producao.id);
+    setSelectedProducaoHora(producao.id || '');
     
     // Abrir o modal de edição
     setProducaoHoraModalVisible(true);
@@ -929,7 +990,7 @@ export function Dashboard() {
     return [...producoes].sort(compararHorarios);
   }
 
-  // Modificar a função handleDeleteProducaoHora
+  // Modificar handleDeleteProducaoHora para remover também do storage
   async function handleDeleteProducaoHora(id: string) {
     try {
       // Deletar no Firebase
@@ -937,6 +998,11 @@ export function Dashboard() {
       
       // Remover da lista local
       removerProducaoHora(id);
+
+      // Remover do storage local
+      const localProducoes = await storage.getProducaoHora() || [];
+      const updatedProducoes = localProducoes.filter((p: ProducaoHora) => p.id !== id);
+      await storage.saveProducaoHora(updatedProducoes);
 
       Alert.alert('Sucesso', 'Produção removida com sucesso!');
       setAcoesModalVisible(false);
